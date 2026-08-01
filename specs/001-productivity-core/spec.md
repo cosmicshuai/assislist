@@ -16,68 +16,68 @@ store → single place to review and execute. Replaces Things 3 (no API) and
 rejected Vikunja (UI) with an app built to fit.
 
 ## 2. User Stories
-- [ ] US-001: As a user, I want to send a WhatsApp voice note with a todo, so
+- [x] US-001: As a user, I want to send a WhatsApp voice note with a todo, so
   that I can capture thoughts hands-free.
   - Given WhatsApp is connected, When I send a voice note containing a todo,
     Then Hermes transcribes it and creates tasks in the store.
-- [ ] US-002: As a user, I want the AI to research and break down a vague
+- [x] US-002: As a user, I want the AI to research and break down a vague
   request into concrete subtasks, so that I don't have to think through the
   details.
   - Given a captured todo, When the agent processes it, Then it produces
     subtasks each with context, urgency, and dependencies.
-- [ ] US-003: As a user, I want to see my tasks in a clean web app, so that I
+- [x] US-003: As a user, I want to see my tasks in a clean web app, so that I
   can review, reorder, and complete them.
-- [ ] US-004: As a user, I want tasks to show what they depend on, so that I
+- [x] US-004: As a user, I want tasks to show what they depend on, so that I
   know the right order to work.
 
 ## 3. Functional Requirements
-- [ ] FR-001 (MUST): Task CRUD — create, read, update, delete tasks with
+- [x] FR-001 (MUST): Task CRUD — create, read, update, delete tasks with
   title, description/context, status, priority, due date.
-- [ ] FR-002 (MUST): Subtasks — a task can have child tasks (breakdown tree).
-- [ ] FR-003 (MUST): Dependencies — task A can depend on task B; UI + API
+- [x] FR-002 (MUST): Subtasks — a task can have child tasks (breakdown tree).
+- [x] FR-003 (MUST): Dependencies — task A can depend on task B; UI + API
   expose the graph (depends_on / blocks).
-- [ ] FR-004 (MUST): Priority/urgency — machine-readable priority
+- [x] FR-004 (MUST): Priority/urgency — machine-readable priority
   (low/medium/high/urgent) plus optional auto-derived urgency.
-- [ ] FR-005 (MUST): API for AI agent — token or localhost auth; endpoints
+- [x] FR-005 (MUST): API for AI agent — token or localhost auth; endpoints
   to create tasks/subtasks with context and dependencies; Hermes can POST.
-- [ ] FR-006 (MUST): Capture pipeline — Hermes WhatsApp text + voice messages
+- [x] FR-006 (MUST): Capture pipeline — Hermes WhatsApp text + voice messages
   create tasks via the API (after optional user confirmation, see Q8).
-- [ ] FR-007 (SHOULD): AI breakdown — agent research (web search) + subtask
+- [x] FR-007 (SHOULD): AI breakdown — agent research (web search) + subtask
   generation with context, urgency, dependency links (behavior defined in a
   skill/AGENTS instruction, not app code).
-- [ ] FR-008 (SHOULD): Filtering/sorting — by status, priority, due date,
+- [x] FR-008 (SHOULD): Filtering/sorting — by status, priority, due date,
   dependency order (topological).
-- [ ] FR-009 (MUST): Repository pattern — TaskRepository abstraction
+- [x] FR-009 (MUST): Repository pattern — TaskRepository abstraction
   (PgTaskRepository on dev-infra Postgres 16, DB `todo_system`).
 
 ## 4. Non-Functional Requirements
-- [ ] NFR-001 (MUST): Runs on the homelab (Node 25, Express, Postgres 16),
+- [x] NFR-001 (MUST): Runs on the homelab (Node 25, Express, Postgres 16),
   port 3456, LAN-bound + Tailscale HTTPS.
-- [ ] NFR-002 (MUST): Single-user, local-first. No auth in v1 beyond LAN +
+- [x] NFR-002 (MUST): Single-user, local-first. No auth in v1 beyond LAN +
   Tailscale boundary (revisit if exposed publicly).
-- [ ] NFR-003 (MUST): Data durability — Postgres DB on ssd1 (dev-infra);
+- [x] NFR-003 (MUST): Data durability — Postgres DB on ssd1 (dev-infra);
   backup via existing nightly backup flow (ssd2 backups include postgresql).
-- [ ] NFR-004 (MUST): API stable IDs + JSON; agent-friendly.
-- [ ] NFR-005 (SHOULD): UI fast and clean; mobile-usable.
+- [x] NFR-004 (MUST): API stable IDs + JSON; agent-friendly.
+- [x] NFR-005 (SHOULD): UI fast and clean; mobile-usable.
 
 ## 5. Acceptance Criteria
-- [ ] AC-001: Voice note "plan Italy trip" → Hermes transcribes → tasks appear
+- [x] AC-001: Voice note "plan Italy trip" → Hermes transcribes → tasks appear
   in web app within ~1 min, broken into subtasks with context.
-- [ ] AC-002: Task with dependency cannot be marked done until dependency done
+- [x] AC-002: Task with dependency cannot be marked done until dependency done
   (or warning per Q3).
-- [ ] AC-003: Web app shows task tree, priority badges, dependency indicators;
+- [x] AC-003: Web app shows task tree, priority badges, dependency indicators;
   CRUD works end-to-end.
-- [ ] AC-004: API create-task from curl/Hermes works with auth token.
+- [x] AC-004: API create-task from curl/Hermes works with auth token.
 
 ## 6. Edge Cases
-- [ ] EC-001: Empty/garbled voice transcription — no junk tasks (confirm-first
+- [x] EC-001: Empty/garbled voice transcription — no junk tasks (confirm-first
   per Q8).
-- [ ] EC-002: Dependency cycle (A depends on B, B depends on A) — reject or
+- [x] EC-002: Dependency cycle (A depends on B, B depends on A) — reject or
   flag.
-- [ ] EC-003: Huge breakdown (50+ tasks) — batch create, progress feedback.
-- [ ] EC-004: AI unavailable (DeepSeek down) — capture still works, breakdown
+- [x] EC-003: Huge breakdown (50+ tasks) — batch create, progress feedback.
+- [x] EC-004: AI unavailable (DeepSeek down) — capture still works, breakdown
   deferred with "unprocessed" status.
-- [ ] EC-005: Duplicate capture — same request twice → dedupe hint, not error.
+- [x] EC-005: Duplicate capture — same request twice → dedupe hint, not error.
 
 ## 7. Out of Scope
 - Multi-user/auth/SSO, sharing, comments, attachments, calendar sync,
