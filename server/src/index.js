@@ -4,6 +4,7 @@ import { config } from './config.js';
 import { authMiddleware } from './middleware/auth.js';
 import tasksRouter from './routes/tasks.js';
 import dependenciesRouter from './routes/dependencies.js';
+import capturesRouter from './routes/captures.js';
 
 const app = express();
 app.use(express.json());
@@ -21,6 +22,7 @@ app.get('/', (req, res) => {
 // Authenticated API
 app.use('/api/v1/tasks', authMiddleware, tasksRouter);
 app.use('/api/v1/tasks', authMiddleware, dependenciesRouter);
+app.use('/api/v1/captures', authMiddleware, capturesRouter);
 
 // 404 for unknown API routes
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

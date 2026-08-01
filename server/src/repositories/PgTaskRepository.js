@@ -13,19 +13,21 @@ const PRIORITY_ORDER = { urgent: 1, high: 2, medium: 3, low: 4 };
 
 function normalize(row) {
   if (!row) return null;
+  // Support both drizzle camelCase rows and raw pg snake_case rows
+  const r = row;
   return {
-    id: row.id,
-    title: row.title,
-    context: row.context,
-    status: row.status,
-    priority: row.priority,
-    urgency: row.urgency,
-    dueDate: row.dueDate ? new Date(row.dueDate) : null,
-    parentId: row.parentId ?? null,
-    source: row.source,
-    completedAt: row.completedAt ? new Date(row.completedAt) : null,
-    createdAt: row.createdAt ? new Date(row.createdAt) : null,
-    updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
+    id: r.id,
+    title: r.title,
+    context: r.context,
+    status: r.status,
+    priority: r.priority,
+    urgency: r.urgency,
+    dueDate: r.dueDate ? new Date(r.dueDate) : r.due_date ? new Date(r.due_date) : null,
+    parentId: r.parentId ?? r.parent_id ?? null,
+    source: r.source,
+    completedAt: r.completedAt ? new Date(r.completedAt) : r.completed_at ? new Date(r.completed_at) : null,
+    createdAt: r.createdAt ? new Date(r.createdAt) : r.created_at ? new Date(r.created_at) : null,
+    updatedAt: r.updatedAt ? new Date(r.updatedAt) : r.updated_at ? new Date(r.updated_at) : null,
   };
 }
 
