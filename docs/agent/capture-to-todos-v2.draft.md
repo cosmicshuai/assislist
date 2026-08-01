@@ -19,23 +19,29 @@ generic breakdown.
 ### 1. Transcribe (voice only)
 Hermes already auto-transcribes (faster-whisper). Use the transcription as input.
 
-### 2. Gather context (NEW — memory-aware)
-Combine THREE sources before breaking down:
+### 2. Gather context — memory-aware + PROACTIVE CLARIFICATION
+Before breaking down, decide if the todo has enough context. Look for what is
+missing or vague: deadline, scope, people involved, constraints, location,
+budget, "why", or ambiguous phrasing.
 
+- If the message already carries enough context, skip to research/breakdown.
+- Otherwise ask 1–3 targeted questions in ONE WhatsApp message (batched, not
+  an interrogation), derived from the actual gaps. STOP and wait for the
+  reply — do NOT create the task tree yet.
+- If the user says "just capture it", create with what you have.
+
+Then combine FOUR sources:
 a) **Message context**: the todo text + anything the user said around it.
-b) **User memory**: consult user profile + memory notes for relevant durable
-   facts (e.g. lives in Arlington MA, uses Things 3, iPhone photos workflow,
-   prefers files-as-truth). Ask: what does the user's situation imply about
-   this task?
-c) **Past task history**: if useful, session_search / list tasks for related
-   prior captures ("plan Italy trip" may already have prior subtasks) so we
-   don't duplicate and can reuse known context.
-d) **Web research (if useful)**: quick search for factual gaps; at most ONE
+b) **User memory**: consult the user profile + memory notes for durable
+   facts relevant to this task (location, tools, preferences, active
+   projects). Ask: what does the user's real situation imply here?
+c) **Past task history**: check the Todo System for related captures
+   (GET /api/v1/tasks?q=<keyword>). Reuse known context; avoid duplicates.
+d) **Web research (if useful)**: quick search for factual gaps. At most ONE
    link/fact per subtask; never fabricate URLs.
 
-Rule: context in subtasks must reflect the user's real situation, not generic
-advice. If memory has a relevant fact (e.g. "user prefers nonstop flights"),
-fold it into the subtask context.
+Rule: subtask context must reflect the user's real situation, not generic
+advice. If memory has a relevant fact, fold it into the context.
 
 ### 3. Breakdown (ordered + dependency-aware)
 - 1 parent + 2..8 subtasks.
