@@ -33,8 +33,8 @@ export function TaskCard({ task, children = [], onToggle, onDelete, onAddSubtask
   const hasChildren = children.length > 0;
 
   return (
-    <Card variant="outlined" sx={{ opacity: completed ? 0.6 : 1 }}>
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+      <Card variant="outlined" sx={{ opacity: completed ? 0.6 : 1, bgcolor: 'surfaceContainer', border: 0 }}>
+        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" alignItems="flex-start" spacing={1}>
           <Tooltip title={blocked.length > 0 ? `Blocked by ${blocked[0].title}` : completed ? 'Reopen' : 'Complete'}>
             <span>
