@@ -20,4 +20,20 @@ does the task actually get created and processed?
 
 ## Answer
 
-(recorded on resolution)
+PROPOSED (pending user confirmation — 2026-08-01):
+
+- **Option C (hybrid, Hermes-side processing)**: Hermes does the research +
+  breakdown (it has web search + DeepSeek), then POSTs the structured result
+  (parent task + subtasks with context/urgency/dependencies) to the app's API.
+- The app stays a dumb store + UI: it validates a JSON schema, persists, and
+  returns IDs. No app-side LLM calls in v1.
+- Capture flow: WhatsApp message → Hermes (already connected) → optional
+  clarifying question if ambiguous → Hermes runs breakdown → POST
+  /api/v1/captures → app creates task tree → Hermes replies with a short
+  confirmation + link to the web app.
+- Auth: a single API token in ~/homelab/.env (TODO_API_TOKEN), sent as
+  `Authorization: Bearer <token>`. No user accounts in v1.
+- The breakdown behavior itself is defined as a Hermes skill (a "capture to
+  todos" skill) so it's versionable and inspectable — not buried in app code.
+
+Awaiting user confirmation before this ticket is resolved.
