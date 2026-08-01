@@ -1,10 +1,11 @@
 // App.tsx — main screen: task tree + quick add + filters
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { api, type Task, type TaskFilters } from './api/client';
 import { useTasks } from './hooks/useTasks';
 import { TaskCard } from './components/TaskCard';
 import { AddTaskForm } from './components/AddTaskForm';
 import { FilterBar } from './components/FilterBar';
+import { SwipeRow } from './components/SwipeRow';
 
 export default function App() {
   const [filters, setFilters] = useState<TaskFilters>({});
@@ -58,8 +59,30 @@ export default function App() {
     document.dispatchEvent(new CustomEvent('todo:subtask', { detail: { parentId: parent.id } }));
   }
 
+  // Pull-to-refresh (touch)
+  const touchY = useRef<number | null>(null);
+  const [pullHint, setPullHint] = useState(false);
+  function onTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    if (window.scrollY === 0) touchY.current = e.touches[0].clientY;
+  }
+  function onTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    if (touchY.current === null) return;
+    const dy = e.touches[0].clientY - touchY.current;
+    if (dy > 80) setPullHint(true);
+  }
+  function onTouchEnd() {
+    if (touchY.current !== null && pullHint) reload();
+    touchY.current = null;
+    setPullHint(false);
+  }
+
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col gap-4 p-4 pb-24">
+    <div
+      className="mx-auto flex min-h-full max-w-xl flex-col gap-4 p-4 pb-24"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-100">Todos</h1>
         <button
@@ -87,6 +110,10 @@ export default function App() {
         </div>
       )}
 
+      {pullHint && (
+        <p className="py-1 text-center text-xs text-cyan-400">Release to refresh…</p>
+      )}
+
       {loading ? (
         <p className="py-8 text-center text-sm text-slate-500">Loading…</p>
       ) : tree.length === 0 ? (
@@ -96,14 +123,20 @@ export default function App() {
       ) : (
         <div className="space-y-2">
           {tree.map((t) => (
-            <TaskCard
+            <SwipeRow
               key={t.id}
-              task={t}
-              children={t.children}
-              onToggle={handleToggle}
-              onDelete={handleDelete}
-              onAddSubtask={handleAddSubtask}
-            />
+              onComplete={() => handleToggle(t)}
+              onDelete={() => handleDelete(t)}
+              disabled={t.status === 'completed' || (t.blocked_by || []).some((b) => b.status !== 'completed')}
+            >
+              <TaskCard
+                task={t}
+                children={t.children}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+                onAddSubtask={handleAddSubtask}
+              />
+            </SwipeRow>
           ))}
         </div>
       )}
