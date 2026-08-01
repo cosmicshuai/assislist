@@ -1,6 +1,6 @@
 # Draft — stale-task-triage (skill)
 
-Status: DRAFT for review — not installed yet
+Status: IMPLEMENTED 2026-08-01
 
 ## Purpose
 

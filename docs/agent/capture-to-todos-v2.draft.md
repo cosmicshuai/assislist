@@ -1,6 +1,6 @@
 # Draft — capture-to-todos v2 (skill)
 
-Status: DRAFT for review — not installed yet
+Status: IMPLEMENTED 2026-08-01
 Replaces: `capture-to-todos` (v1, 2026-08-01)
 
 ## Purpose

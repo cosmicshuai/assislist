@@ -1,6 +1,6 @@
 # Draft — cron job: agent LLM reasoning every 6 hours
 
-Status: DRAFT for review — not created yet
+Status: IMPLEMENTED 2026-08-01 — job `8aac22b0c1ae` (todo-recommend-llm, `0 */6 * * *`, deliver=local) and job `6dc8d7bdf498` (todo-stale-triage, `0 9 * * *`, deliver=whatsapp).
 
 ## Job 1: recommend-llm (every 6h)
 
