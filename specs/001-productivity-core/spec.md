@@ -48,15 +48,15 @@ rejected Vikunja (UI) with an app built to fit.
 - [ ] FR-008 (SHOULD): Filtering/sorting — by status, priority, due date,
   dependency order (topological).
 - [ ] FR-009 (MUST): Repository pattern — TaskRepository abstraction
-  (SqliteTaskRepository MVP) for future PG migration.
+  (PgTaskRepository on dev-infra Postgres 16, DB `todo_system`).
 
 ## 4. Non-Functional Requirements
-- [ ] NFR-001 (MUST): Runs on the homelab (Node 25, node:sqlite), port 3456,
-  LAN-bound + Tailscale HTTPS.
+- [ ] NFR-001 (MUST): Runs on the homelab (Node 25, Express, Postgres 16),
+  port 3456, LAN-bound + Tailscale HTTPS.
 - [ ] NFR-002 (MUST): Single-user, local-first. No auth in v1 beyond LAN +
   Tailscale boundary (revisit if exposed publicly).
-- [ ] NFR-003 (MUST): Data durability — SQLite DB + canonical store; backup
-  via existing nightly rsync.
+- [ ] NFR-003 (MUST): Data durability — Postgres DB on ssd1 (dev-infra);
+  backup via existing nightly backup flow (ssd2 backups include postgresql).
 - [ ] NFR-004 (MUST): API stable IDs + JSON; agent-friendly.
 - [ ] NFR-005 (SHOULD): UI fast and clean; mobile-usable.
 
@@ -90,9 +90,11 @@ rejected Vikunja (UI) with an app built to fit.
 - Existing ~/dev/todo-app used as API reference only.
 
 ## 9. Open Questions
-- [x] Q1 RESOLVED 2026-08-01: Option A — files as source of truth + SQLite as
-  rebuildable index/cache (matches constitution P3 and user's documented
-  storage preference). FR-009 repository pattern retained for PG future.
+- [x] Q1 RESOLVED 2026-08-01 (AMENDED 2026-08-01): PostgreSQL as source of
+  truth using existing dev-infra Postgres 16 (DB `todo_system`), drizzle-orm
+  beta + repository pattern. User decision: "drizzle-orm beta + postgres,
+  remember our dev-infra setup". Supersedes earlier files-as-truth/SQLite
+  default.
 - [x] Q2 RESOLVED 2026-08-01: React + Vite frontend (matches constitution and
   user's documented preference for markdown-critical UX).
 - [x] Q3 RESOLVED 2026-08-01: Strict dependency block — API rejects marking a

@@ -16,10 +16,12 @@ can read and write it programmatically.
 - P1: Spec is Contract. No implementation without an approved spec. Changes
   require explicit amendment.
 - P2: What before How. spec.md defines WHAT/WHY only; plan.md defines HOW.
-- P3: Files as source of truth, SQLite as rebuildable index/cache. Task data
-  lives in a canonical store; the DB can be rebuilt from it.
-- P4: Repository pattern abstraction (TaskRepository) so SQLite → PostgreSQL
-  migration stays possible without touching routes/services.
+- P3 (AMENDED 2026-08-01): PostgreSQL as source of truth, using the existing
+  dev-infra Postgres 16 (localhost:5432, DB `todo_system`). Repository
+  pattern keeps the app portable if storage changes again.
+- P4: Repository pattern abstraction (TaskRepository) so storage can change
+  (e.g. SQLite → PostgreSQL, or a different host) without touching
+  routes/services.
 - P5: Agent-friendly. The API is the contract for the WhatsApp/AI pipeline;
   every task has stable IDs, machine-readable status, urgency, dependencies.
 - P6: Local-first, single user. No auth/SSO in v1 (LAN + Tailscale only).
@@ -30,12 +32,13 @@ can read and write it programmatically.
 ## Tech Constraints
 
 - Node.js + Express (ESM), matching spec-manager conventions.
-- SQLite via node:sqlite (Node 22.5+/25-safe; better-sqlite3 breaks on Node 25
-  which is the installed runtime).
-- drizzle-orm for schema + repository pattern (SQLite now, PG later).
+- PostgreSQL 16 (dev-infra systemd service, peer auth via unix socket as
+  cosmic, DB `todo_system`).
+- drizzle-orm (beta line per user decision) + repository pattern
+  (TaskRepository → PgTaskRepository).
 - Frontend: React + Vite (markdown viewing/editing of task context is
   important; split-pane if needed).
-- Data dir: `data/` gitignored, single-file DB + canonical store.
+- Data lives in Postgres (todo_system); project `.env` holds DATABASE_URL.
 - Port: 3456 was used by Vikunja (now removed); reuse 3456, bound to
   192.168.1.180 only; Tailscale serve --https=3456 for HTTPS on tailnet.
 
@@ -81,6 +84,9 @@ todo-system/
 - Amendments recorded in spec.md changelog with date and rationale.
 
 ## Changelog
-
+- 2026-08-01: v0.2.0 — P3 + tech constraints amended: SQLite/node:sqlite
+  replaced by existing dev-infra PostgreSQL 16 (user decision: "drizzle-orm
+  beta + postgres, remember our dev-infra setup"). Repository pattern
+  retained for portability.
 - 2026-08-01: v0.1.0 initial constitution. Project started after Vikunja
   rejected for UI; existing ~/dev/todo-app used as API reference only.

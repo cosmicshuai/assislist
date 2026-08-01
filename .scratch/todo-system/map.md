@@ -50,7 +50,8 @@ it over Things 3.
 
 ## Not yet specified
 
-- Stack verification details (ticket 01 — research subagent in flight).
+- Stack decision: Postgres 16 (dev-infra, DB todo_system) + drizzle-orm beta
+  + pg driver, repository pattern (ticket 01, resolved 2026-08-01).
 - Remaining fog past the frontier: exact component library choice (resolved
   by ticket 01 research), API route shapes (plan phase), and the Hermes
   "capture to todos" skill content (implement phase).
