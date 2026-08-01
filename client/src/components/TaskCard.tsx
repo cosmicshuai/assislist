@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import type { Task } from '../api/client';
 import { cn, formatDue, priorityColor, priorityLabel } from '../lib/utils';
+import { SourceTag } from './SourceTag';
 
 interface Props {
   task: Task;
@@ -60,6 +61,7 @@ export function TaskCard({ task, children = [], onToggle, onDelete, onAddSubtask
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <SourceTag source={task.source} />
             <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide', priorityColor[task.urgency])}>
               {priorityLabel[task.urgency]}
             </span>
