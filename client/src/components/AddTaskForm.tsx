@@ -38,24 +38,24 @@ export function AddTaskForm({ onCreated, parentId = null }: Props) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+    <form onSubmit={submit} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/70">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Add a task…"
-        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-cyan-500"
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
       />
       <input
         value={context}
         onChange={(e) => setContext(e.target.value)}
         placeholder="Context (optional)"
-        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-cyan-500"
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
       />
       <div className="flex items-center justify-between gap-2">
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as typeof priority)}
-          className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500"
+          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>

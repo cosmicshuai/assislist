@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: dark;
+}
+:root.dark {
   color-scheme: dark;
 }
 
@@ -9,7 +14,7 @@ html, body, #root {
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
+  @apply bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
