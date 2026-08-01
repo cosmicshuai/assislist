@@ -31,19 +31,29 @@ it over Things 3.
 - Task model: flat tree with parent_id; projects deferred (spec Q6).
 - Dedupe: fuzzy close-title hint, not hard block (spec Q7).
 - UX: auto-create with undo (spec Q8).
+- UI shape: expanding cards on mobile (parent card expands subtasks inline);
+  dependency shown as "Blocked by" badge + disabled checkbox; 4-color urgency
+  (urgent/high/medium/low); v1 filters status/priority/urgency/due/
+  dependency-state/search; bottom action bar + swipe on mobile; PWA worth
+  adding (ticket 02, confirmed 2026-08-01).
+- Capture integration: Hermes-side processing (hybrid) — Hermes researches +
+  breaks down, app is a dumb store+UI; single API token TODO_API_TOKEN;
+  breakdown behavior lives as a Hermes skill (ticket 03, confirmed
+  2026-08-01).
+- Breakdown contract: parent task + 2..8 subtasks; each has title, context
+  (1-3 sentences, markdown), priority, optional due_date, depends_on
+  (sibling indices); urgency rules defined; API validates JSON schema;
+  dedupe hint returned as `similar` (ticket 04, confirmed 2026-08-01).
+- Filtering scope: v1 filters status/priority/urgency/due/dependency/search;
+  sorts created/priority/due/topological; bottom-sheet on mobile; saved views
+  deferred to v2 (ticket 05, confirmed 2026-08-01).
 
 ## Not yet specified
 
-- Exact UI shape that reads as "polished and mobile-perfect" — how the task
-  tree, dependency indicators, and filters should look and behave.
-- How WhatsApp capture actually integrates: Hermes-side instruction vs
-  webhook endpoint vs both — and how "research + breakdown" is invoked.
-- What a breakdown run produces: title/context/urgency rules; where the logic
-  lives (Hermes skill prompt vs app-side).
-- Advanced filtering scope: which filters (by project? by dependency status?
-  saved views?).
-- Stack verification: drizzle-orm + node:sqlite on Node 25; React+Vite mobile
-  libraries (Tailwind? PWA?).
+- Stack verification details (ticket 01 — research subagent in flight).
+- Remaining fog past the frontier: exact component library choice (resolved
+  by ticket 01 research), API route shapes (plan phase), and the Hermes
+  "capture to todos" skill content (implement phase).
 
 ## Out of scope
 

@@ -1,7 +1,7 @@
 # 05 — Scope the advanced filtering
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 02
 
 ## Question

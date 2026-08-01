@@ -1,7 +1,7 @@
 # 04 — Define the AI breakdown output contract
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 03
 
 ## Question

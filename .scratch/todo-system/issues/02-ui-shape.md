@@ -1,7 +1,7 @@
 # 02 — Define the UI shape for "polished and mobile-perfect"
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by:
 
 ## Question

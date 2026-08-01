@@ -1,7 +1,7 @@
 # 03 — Decide how WhatsApp capture invokes the pipeline
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by:
 
 ## Question
