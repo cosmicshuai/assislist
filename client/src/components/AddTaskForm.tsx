@@ -1,11 +1,20 @@
-// components/AddTaskForm.tsx — quick add task (manual capture)
+// components/AddTaskForm.tsx — quick add task (MUI)
 import { useState } from 'react';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
 import { api } from '../api/client';
 
 interface Props {
   onCreated: () => void;
   parentId?: number | null;
 }
+
+const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 
 export function AddTaskForm({ onCreated, parentId = null }: Props) {
   const [title, setTitle] = useState('');
@@ -38,39 +47,48 @@ export function AddTaskForm({ onCreated, parentId = null }: Props) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/70">
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Add a task…"
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
-      />
-      <input
-        value={context}
-        onChange={(e) => setContext(e.target.value)}
-        placeholder="Context (optional)"
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
-      />
-      <div className="flex items-center justify-between gap-2">
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value as typeof priority)}
-          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-        >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-        </select>
-        <button
-          type="submit"
-          disabled={submitting || !title.trim()}
-          className="rounded-lg bg-cyan-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-cyan-500 disabled:opacity-40"
-        >
-          {submitting ? 'Adding…' : 'Add'}
-        </button>
-      </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </form>
+    <Paper variant="outlined" sx={{ p: 2 }}>
+      <Box component="form" onSubmit={submit} noValidate>
+        <Stack spacing={1.5}>
+          <TextField
+            size="small"
+            fullWidth
+            label="Task title"
+            placeholder="e.g. Plan Italy trip"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+          />
+          <TextField
+            size="small"
+            fullWidth
+            label="Context (optional)"
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            multiline
+            minRows={1}
+            maxRows={3}
+          />
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <TextField
+              select
+              size="small"
+              label="Priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as typeof priority)}
+              sx={{ minWidth: 140 }}
+            >
+              {PRIORITIES.map((p) => (
+                <MenuItem key={p} value={p} sx={{ textTransform: 'capitalize' }}>{p}</MenuItem>
+              ))}
+            </TextField>
+            <Button type="submit" variant="contained" disabled={submitting || !title.trim()}>
+              {submitting ? 'Adding…' : 'Add'}
+            </Button>
+          </Stack>
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </Box>
+    </Paper>
   );
 }

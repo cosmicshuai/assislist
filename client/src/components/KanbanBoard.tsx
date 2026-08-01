@@ -1,36 +1,46 @@
-// components/KanbanBoard.tsx — homepage: projects grouped by urgency + hover preview
-import { useMemo, useState } from 'react';
-import { type Task } from '../api/client';
+// components/KanbanBoard.tsx — homepage: projects grouped by urgency (MUI)
+import { useMemo, useRef, useState } from 'react';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
+import CardContent from '@mui/material/CardContent';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Popper from '@mui/material/Popper';
+import Fade from '@mui/material/Fade';
+import Stack from '@mui/material/Stack';
+import AddIcon from '@mui/icons-material/Add';
+import type { Task } from '../api/client';
 import { useTasks } from '../hooks/useTasks';
 import { SourceTag } from './SourceTag';
 import { AddTaskForm } from './AddTaskForm';
-import { cn, formatDue, priorityColor, priorityLabel } from '../lib/utils';
+import { formatDue } from '../lib/utils';
 
 interface Props {
   onOpenProject: (id: number) => void;
 }
 
-const COLUMNS: Array<{ key: string; label: string; color: string; header: string }> = [
-  { key: 'urgent', label: 'Urgent', color: 'border-red-500/40 bg-red-500/5', header: 'text-red-400' },
-  { key: 'high', label: 'High', color: 'border-orange-500/40 bg-orange-500/5', header: 'text-orange-400' },
-  { key: 'medium', label: 'Medium', color: 'border-blue-500/40 bg-blue-500/5', header: 'text-blue-400' },
-  { key: 'low', label: 'Low', color: 'border-slate-500/40 bg-slate-500/5', header: 'text-slate-400' },
-  { key: 'done', label: 'Done', color: 'border-emerald-500/40 bg-emerald-500/5', header: 'text-emerald-400' },
+const COLUMNS = [
+  { key: 'urgent', label: 'Urgent', color: 'error' as const },
+  { key: 'high', label: 'High', color: 'warning' as const },
+  { key: 'medium', label: 'Medium', color: 'primary' as const },
+  { key: 'low', label: 'Low', color: 'default' as const },
+  { key: 'done', label: 'Done', color: 'success' as const },
 ];
-
-interface PopupState {
-  task: Task;
-  x: number;
-  y: number;
-  above: boolean;
-}
 
 export function KanbanBoard({ onOpenProject }: Props) {
   const { tasks, loading, error, reload } = useTasks({});
-  const [popup, setPopup] = useState<PopupState | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
-  // Build tree and pick parent projects (tasks with no parent)
+  // Hover preview state
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [hoverTask, setHoverTask] = useState<Task | null>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const projects = useMemo(() => {
     const byId = new Map<number, Task>();
     tasks.forEach((t) => byId.set(t.id, t));
@@ -56,138 +66,151 @@ export function KanbanBoard({ onOpenProject }: Props) {
     return groups;
   }, [projects]);
 
-  // Hover popup positioning: fixed, above the tile when possible
-  function onTileEnter(e: React.MouseEvent, task: Task) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const above = rect.top > 260;
-    setPopup({
-      task,
-      x: Math.min(rect.left, window.innerWidth - 300),
-      y: above ? rect.top - 12 : rect.bottom + 12,
-      above,
-    });
+  // Hover with slight delay so moving across tiles doesn't flash
+  function onEnter(e: React.MouseEvent<HTMLElement>, task: Task) {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    hoverTimeout.current = setTimeout(() => {
+      setAnchorEl(e.currentTarget);
+      setHoverTask(task);
+    }, 180);
+  }
+  function onLeave() {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    setAnchorEl(null);
+    setHoverTask(null);
   }
 
-  if (error) return <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">{error}</div>;
-  if (loading) return <p className="py-8 text-center text-sm text-slate-500">Loading…</p>;
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
 
   const totalOpen = projects.filter((p) => p.status !== 'completed').length;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Projects</h1>
-          <p className="text-xs text-slate-500">{totalOpen} open · {projects.length} total</p>
-        </div>
-        <button
+    <Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Box>
+          <Typography variant="h5">Projects</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {totalOpen} open · {projects.length} total
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
           onClick={() => setShowAdd(!showAdd)}
-          className="rounded-lg bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-cyan-500"
         >
-          {showAdd ? 'Close' : '+ New'}
-        </button>
-      </div>
+          {showAdd ? 'Close' : 'New'}
+        </Button>
+      </Stack>
 
-      {showAdd && <AddTaskForm onCreated={() => { setShowAdd(false); reload(); }} />}
+      {showAdd && <Box sx={{ mb: 2 }}><AddTaskForm onCreated={() => { setShowAdd(false); reload(); }} /></Box>}
 
-      <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4">
+      <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2, alignItems: 'flex-start' }}>
         {COLUMNS.map((col) => {
           const items = columns[col.key] || [];
           return (
-            <div
+            <Paper
               key={col.key}
-              className={cn(
-                'flex min-h-[55vh] w-72 shrink-0 snap-start flex-col rounded-2xl border p-2',
-                'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40',
-                col.color,
-              )}
+              variant="outlined"
+              sx={{
+                minWidth: 280,
+                width: 280,
+                flexShrink: 0,
+                minHeight: 420,
+                p: 1.5,
+                bgcolor: 'background.paper',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
             >
-              <div className="mb-2 flex items-center justify-between px-1">
-                <span className={cn('text-xs font-semibold uppercase tracking-wider', col.header)}>{col.label}</span>
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">{items.length}</span>
-              </div>
-              <div className="flex flex-1 flex-col gap-2">
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
+                <Typography variant="overline" color={col.color} sx={{ fontWeight: 700 }}>
+                  {col.label}
+                </Typography>
+                <Chip label={items.length} size="small" variant="outlined" />
+              </Stack>
+              <Stack spacing={1.5} sx={{ flexGrow: 1 }}>
                 {items.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-[11px] text-slate-400 dark:border-slate-700 dark:text-slate-600">
+                  <Typography variant="body2" color="text.disabled" align="center" sx={{ py: 4 }}>
                     Empty
-                  </div>
+                  </Typography>
                 )}
                 {items.map((p) => (
-                  <button
+                  <Card
                     key={p.id}
-                    onClick={() => onOpenProject(p.id)}
-                    onMouseEnter={(e) => onTileEnter(e, p)}
-                    onMouseLeave={() => setPopup(null)}
-                    className="group rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/80 dark:hover:border-slate-600 dark:hover:bg-slate-800/80"
+                    variant="outlined"
+                    onMouseEnter={(e) => onEnter(e, p)}
+                    onMouseLeave={onLeave}
+                    sx={{
+                      transition: 'transform 0.15s, box-shadow 0.2s',
+                      '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 },
+                      opacity: p.status === 'completed' ? 0.55 : 1,
+                    }}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className={cn('text-sm font-medium text-slate-900 dark:text-slate-100', p.status === 'completed' && 'line-through text-slate-400 dark:text-slate-500')}>
-                        {p.title}
-                      </span>
-                      <span className="text-xs text-slate-400 opacity-0 transition group-hover:opacity-100">→</span>
-                    </div>
-                    {p.context && <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{p.context}</p>}
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <SourceTag source={p.source} />
-                      <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase', priorityColor[p.urgency])}>
-                        {priorityLabel[p.urgency]}
-                      </span>
-                      {p.children && p.children.length > 0 && (
-                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                          {p.children.length} sub{p.children.length === 1 ? '' : 's'}
-                        </span>
-                      )}
-                      {p.dueDate && p.status !== 'completed' && (
-                        <span className="rounded-full px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400">{formatDue(p.dueDate)}</span>
-                      )}
-                    </div>
-                  </button>
+                    <CardActionArea onClick={() => onOpenProject(p.id)}>
+                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, textDecoration: p.status === 'completed' ? 'line-through' : 'none' }}>
+                          {p.title}
+                        </Typography>
+                        {p.context && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {p.context}
+                          </Typography>
+                        )}
+                        <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.75 }}>
+                          <SourceTag source={p.source} />
+                          <Chip label={p.urgency} size="small" color={col.color === 'default' ? 'default' : col.color} variant="outlined" sx={{ textTransform: 'capitalize' }} />
+                          {p.children && p.children.length > 0 && (
+                            <Chip label={`${p.children.length} sub`} size="small" variant="outlined" />
+                          )}
+                          {p.dueDate && p.status !== 'completed' && (
+                            <Chip label={formatDue(p.dueDate)} size="small" color="warning" variant="outlined" />
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
                 ))}
-              </div>
-            </div>
+              </Stack>
+            </Paper>
           );
         })}
-      </div>
+      </Box>
 
       {/* Hover preview popup */}
-      {popup && (
-        <div
-          className="pointer-events-none fixed z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800"
-          style={{
-            left: popup.x,
-            top: popup.y,
-            transform: popup.above ? 'translateY(-100%)' : 'none',
-          }}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{popup.task.title}</span>
-            <SourceTag source={popup.task.source} />
-          </div>
-          {popup.task.context ? (
-            <p className="mt-2 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-300">{popup.task.context}</p>
-          ) : (
-            <p className="mt-2 text-xs italic text-slate-400">No context</p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase', priorityColor[popup.task.urgency])}>
-              {priorityLabel[popup.task.urgency]} urgency
-            </span>
-            {popup.task.dueDate && (
-              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                {formatDue(popup.task.dueDate)}
-              </span>
-            )}
-            {popup.task.children && popup.task.children.length > 0 && (
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                {popup.task.children.length} subtasks
-              </span>
-            )}
-            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-              {popup.task.status}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
+      <Popper open={Boolean(anchorEl)} anchorEl={anchorEl} placement="right-start" transition>
+        {({ TransitionProps }) => (
+          <Fade {...TransitionProps} timeout={150}>
+            <Paper elevation={6} sx={{ width: 300, p: 2, m: 1 }}>
+              {hoverTask && (
+                <>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{hoverTask.title}</Typography>
+                    <SourceTag source={hoverTask.source} />
+                  </Stack>
+                  {hoverTask.context ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {hoverTask.context}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled" fontStyle="italic">No context</Typography>
+                  )}
+                  <Stack direction="row" spacing={0.75} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 0.75 }}>
+                    <Chip label={`${hoverTask.urgency} urgency`} size="small" color="primary" variant="outlined" sx={{ textTransform: 'capitalize' }} />
+                    {hoverTask.dueDate && (
+                      <Chip label={formatDue(hoverTask.dueDate)} size="small" color="warning" variant="outlined" />
+                    )}
+                    {hoverTask.children && hoverTask.children.length > 0 && (
+                      <Chip label={`${hoverTask.children.length} subtasks`} size="small" variant="outlined" />
+                    )}
+                    <Chip label={hoverTask.status} size="small" variant="outlined" />
+                  </Stack>
+                </>
+              )}
+            </Paper>
+          </Fade>
+        )}
+      </Popper>
+    </Box>
   );
 }

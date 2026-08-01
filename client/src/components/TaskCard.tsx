@@ -1,7 +1,21 @@
-// components/TaskCard.tsx — task card with source tag, badges, blocked state
+// components/TaskCard.tsx — task card (MUI) with source tag, badges, blocked state
 import { useState } from 'react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Checkbox from '@mui/material/Checkbox';
+import IconButton from '@mui/material/IconButton';
+import Collapse from '@mui/material/Collapse';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import BlockIcon from '@mui/icons-material/Block';
 import type { Task } from '../api/client';
-import { cn, formatDue, priorityColor, priorityLabel } from '../lib/utils';
+import { formatDue } from '../lib/utils';
 import { SourceTag } from './SourceTag';
 
 interface Props {
@@ -19,101 +33,95 @@ export function TaskCard({ task, children = [], onToggle, onDelete, onAddSubtask
   const hasChildren = children.length > 0;
 
   return (
-    <div className={cn(
-      'rounded-xl border bg-white shadow-sm transition dark:bg-slate-900/70',
-      completed ? 'border-slate-200 opacity-60 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800',
-    )}>
-      <div className="flex items-start gap-3 p-3">
-        {/* Checkbox */}
-        <button
-          aria-label={completed ? 'Reopen' : 'Complete'}
-          onClick={() => onToggle(task)}
-          disabled={blocked.length > 0}
-          className={cn(
-            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition',
-            completed
-              ? 'border-emerald-500 bg-emerald-500 text-white'
-              : blocked.length > 0
-                ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-600'
-                : 'border-slate-400 hover:border-emerald-400 dark:border-slate-500 dark:hover:border-emerald-400',
-          )}
-          title={blocked.length > 0 ? `Blocked by ${blocked[0].title}` : completed ? 'Completed' : 'Complete'}
-        >
-          {completed ? '✓' : blocked.length > 0 ? '⛔' : ''}
-        </button>
-
-        {/* Main content */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className={cn('text-sm font-medium text-slate-900 dark:text-slate-100', completed && 'line-through text-slate-400 dark:text-slate-500')}>
-              {task.title}
+    <Card variant="outlined" sx={{ opacity: completed ? 0.6 : 1 }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Stack direction="row" alignItems="flex-start" spacing={1}>
+          <Tooltip title={blocked.length > 0 ? `Blocked by ${blocked[0].title}` : completed ? 'Reopen' : 'Complete'}>
+            <span>
+              <Checkbox
+                checked={completed}
+                disabled={blocked.length > 0}
+                onChange={() => onToggle(task)}
+                size="small"
+                sx={{ p: 0.5, mt: 0.25 }}
+                icon={blocked.length > 0 ? <BlockIcon fontSize="small" color="warning" /> : undefined}
+              />
             </span>
-            {hasChildren && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-                aria-label={expanded ? 'Collapse' : 'Expand'}
+          </Tooltip>
+
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography
+                variant="body1"
+                sx={{ fontWeight: 500, textDecoration: completed ? 'line-through' : 'none', color: completed ? 'text.disabled' : 'text.primary' }}
               >
-                {expanded ? '▾' : '▸'} {children.length}
-              </button>
-            )}
-          </div>
+                {task.title}
+              </Typography>
+              {hasChildren && (
+                <IconButton
+                  size="small"
+                  onClick={() => setExpanded(!expanded)}
+                  sx={{
+                    transform: expanded ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s',
+                  }}
+                  aria-label={expanded ? 'Collapse' : 'Expand'}
+                >
+                  <ExpandMoreIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Stack>
 
-          {task.context && !completed && (
-            <p className="mt-1 whitespace-pre-wrap text-xs text-slate-500 dark:text-slate-400">{task.context}</p>
-          )}
-
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <SourceTag source={task.source} />
-            <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide', priorityColor[task.urgency])}>
-              {priorityLabel[task.urgency]}
-            </span>
-            {task.priority !== task.urgency && (
-              <span className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                {priorityLabel[task.priority]} priority
-              </span>
+            {task.context && !completed && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                {task.context}
+              </Typography>
             )}
-            {task.dueDate && (
-              <span className={cn('rounded-full px-2 py-0.5 text-[10px]', task.status === 'active' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')}>
-                {formatDue(task.dueDate)}
-              </span>
-            )}
-            {blocked.length > 0 && (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                Blocked by {blocked[0].title}
-                {blocked.length > 1 ? ` +${blocked.length - 1}` : ''}
-              </span>
-            )}
-          </div>
-        </div>
 
-        {/* Actions */}
-        <div className="flex shrink-0 gap-1">
-          <button
-            onClick={() => onAddSubtask(task)}
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-            title="Add subtask"
-          >
-            +
-          </button>
-          <button
-            onClick={() => onDelete(task)}
-            className="rounded p-1 text-slate-400 hover:bg-red-500/10 hover:text-red-400 dark:text-slate-500"
-            title="Delete"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
+            <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.75 }}>
+              <SourceTag source={task.source} />
+              <Chip label={task.urgency} size="small" color="primary" variant="outlined" sx={{ textTransform: 'capitalize' }} />
+              {task.priority !== task.urgency && (
+                <Chip label={`${task.priority} priority`} size="small" variant="outlined" sx={{ textTransform: 'capitalize' }} />
+              )}
+              {task.dueDate && (
+                <Chip label={formatDue(task.dueDate)} size="small" color="warning" variant="outlined" />
+              )}
+              {blocked.length > 0 && (
+                <Chip
+                  label={`Blocked by ${blocked[0].title}${blocked.length > 1 ? ` +${blocked.length - 1}` : ''}`}
+                  size="small"
+                  color="warning"
+                  icon={<BlockIcon />}
+                />
+              )}
+            </Stack>
+          </Box>
 
-      {/* Children */}
-      {hasChildren && expanded && (
-        <div className="space-y-2 border-t border-slate-200 p-3 pl-8 dark:border-slate-800/60">
-          {children.map((c) => (
-            <TaskCard key={c.id} task={c} onToggle={onToggle} onDelete={onDelete} onAddSubtask={onAddSubtask} />
-          ))}
-        </div>
+          <Stack direction="row" spacing={0.25}>
+            <Tooltip title="Add subtask">
+              <IconButton size="small" onClick={() => onAddSubtask(task)}>
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton size="small" color="error" onClick={() => onDelete(task)}>
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Stack>
+      </CardContent>
+
+      {hasChildren && (
+        <Collapse in={expanded}>
+          <Box sx={{ pl: 4, pr: 2, pb: 1.5, borderTop: 1, borderColor: 'divider', pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {children.map((c) => (
+              <TaskCard key={c.id} task={c} onToggle={onToggle} onDelete={onDelete} onAddSubtask={onAddSubtask} />
+            ))}
+          </Box>
+        </Collapse>
       )}
-    </div>
+    </Card>
   );
 }

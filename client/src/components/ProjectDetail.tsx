@@ -1,10 +1,19 @@
-// components/ProjectDetail.tsx — drill-down: a project's children tasks
+// components/ProjectDetail.tsx — drill-down: a project's children tasks (MUI)
 import { useEffect, useMemo, useState } from 'react';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AddIcon from '@mui/icons-material/Add';
 import { api, type Task } from '../api/client';
 import { TaskCard } from './TaskCard';
 import { SourceTag } from './SourceTag';
 import { AddTaskForm } from './AddTaskForm';
-import { cn, priorityColor, priorityLabel } from '../lib/utils';
 
 interface Props {
   projectId: number;
@@ -64,48 +73,60 @@ export function ProjectDetail({ projectId, onBack }: Props) {
     }
   }
 
-  if (error) return <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">{error}</div>;
-  if (loading) return <p className="py-8 text-center text-sm text-slate-500">Loading…</p>;
-  if (!project) return <p className="py-8 text-center text-sm text-slate-500">Project not found.</p>;
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
+  if (!project) return <Typography sx={{ py: 8, textAlign: 'center' }} color="text.secondary">Project not found.</Typography>;
 
   const openCount = children.filter((c) => c.status !== 'completed').length;
 
   return (
-    <div className="space-y-4">
-      <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">← Projects</button>
+    <Box>
+      <Button startIcon={<ArrowBackIcon />} onClick={onBack} sx={{ mb: 2, color: 'text.secondary' }}>
+        Projects
+      </Button>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/70">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className={cn('text-lg font-semibold text-slate-900 dark:text-slate-100', project.status === 'completed' && 'line-through text-slate-400 dark:text-slate-500')}>
-            {project.title}
-          </h1>
-          <button
+      <Paper variant="outlined" sx={{ p: 3, mb: 2 }}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h5" sx={{ textDecoration: project.status === 'completed' ? 'line-through' : 'none' }}>
+              {project.title}
+            </Typography>
+            {project.context && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                {project.context}
+              </Typography>
+            )}
+            <Stack direction="row" spacing={0.75} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 0.75 }}>
+              <SourceTag source={project.source} />
+              <Chip label={project.urgency} size="small" color="primary" variant="outlined" sx={{ textTransform: 'capitalize' }} />
+              <Chip label={`${openCount} of ${children.length} open`} size="small" variant="outlined" />
+            </Stack>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
             onClick={() => setShowAdd(!showAdd)}
-            className="shrink-0 rounded-lg bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-cyan-500"
+            sx={{ flexShrink: 0 }}
           >
-            {showAdd ? 'Close' : '+ Subtask'}
-          </button>
-        </div>
-        {project.context && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-400">{project.context}</p>}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <SourceTag source={project.source} />
-          <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide', priorityColor[project.urgency])}>
-            {priorityLabel[project.urgency]}
-          </span>
-          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-            {openCount} of {children.length} open
-          </span>
-        </div>
-      </div>
+            {showAdd ? 'Close' : 'Subtask'}
+          </Button>
+        </Stack>
+      </Paper>
 
-      {showAdd && <AddTaskForm onCreated={() => { setShowAdd(false); load(); }} parentId={projectId} />}
+      {showAdd && (
+        <Box sx={{ mb: 2 }}>
+          <AddTaskForm onCreated={() => { setShowAdd(false); load(); }} parentId={projectId} />
+        </Box>
+      )}
 
       {children.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400 dark:border-slate-800 dark:text-slate-500">
-          No subtasks yet — add one above, or let the agent break this project down from WhatsApp.
-        </div>
+        <Paper variant="outlined" sx={{ p: 6, textAlign: 'center' }}>
+          <Typography color="text.secondary">
+            No subtasks yet — add one above, or let the agent break this project down from WhatsApp.
+          </Typography>
+        </Paper>
       ) : (
-        <div className="space-y-2">
+        <Stack spacing={1.5}>
           {children.map((c) => (
             <TaskCard
               key={c.id}
@@ -115,8 +136,8 @@ export function ProjectDetail({ projectId, onBack }: Props) {
               onAddSubtask={() => { setShowAdd(true); }}
             />
           ))}
-        </div>
+        </Stack>
       )}
-    </div>
+    </Box>
   );
 }
