@@ -6,6 +6,7 @@ export const config = {
   apiToken: process.env.TODO_API_TOKEN || '',
   port: Number(process.env.PORT || 3456),
   host: process.env.HOST || '192.168.1.180',
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
 };
 
 export function requireApiToken() {

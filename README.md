@@ -55,17 +55,29 @@ npm run dev            # Vite dev with /api proxy
 npm run build && npm run preview -- --host 192.168.1.180 --port 4173
 ```
 
-### Production serving (LAN + Tailscale HTTPS)
+### Production serving (single port :3456 — API + client)
 
-The API is bound to `192.168.1.180:3456`. Tailscale serve provides HTTPS:
+The systemd user service serves both the API and the built client on
+`192.168.1.180:3456`. Tailscale serve provides HTTPS:
 
 ```bash
 tailscale serve --bg --https=3456 http://192.168.1.180:3456
-tailscale serve --bg --https=4173 http://192.168.1.180:4173
 ```
 
-Access: `https://cosmic-me-mini.tail657cd9.ts.net:3456` (API) and
-`:4173` (web app). LAN: `http://192.168.1.180:4173`.
+Access: `https://cosmic-me-mini.tail657cd9.ts.net:3456` (API + web app).
+LAN: `http://192.168.1.180:3456`.
+
+### Service management
+
+```bash
+systemctl --user status todo-system.service   # check
+systemctl --user restart todo-system.service  # restart
+journalctl --user -u todo-system.service -f   # logs
+```
+
+Enabled with linger, so it starts at boot. The client is built to
+`client/dist` and served by the Express server; after client changes, rebuild
+with `cd client && npm run build` then restart the service.
 
 ## WhatsApp capture
 
@@ -91,6 +103,7 @@ Auth: `Authorization: Bearer <TODO_API_TOKEN>` (all except /health).
 | DELETE | /api/v1/tasks/:id | delete (cascades children + deps) |
 | POST | /api/v1/tasks/:id/dependencies | add dependency (cycle-rejected) |
 | DELETE | /api/v1/tasks/:id/dependencies/:depId | remove dependency |
+| GET | /api/v1/recommendations?ai=1 | agent suggestions (top_next + long_term); `ai=1` enriches reasons via DeepSeek if DEEPSEEK_API_KEY is set |
 
 ## Backups
 
