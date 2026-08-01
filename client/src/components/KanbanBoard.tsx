@@ -105,23 +105,14 @@ export function KanbanBoard({ onOpenProject }: Props) {
 
       {showAdd && <Box sx={{ mb: 2 }}><AddTaskForm onCreated={() => { setShowAdd(false); reload(); }} /></Box>}
 
-      <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2, alignItems: 'flex-start' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {COLUMNS.map((col) => {
           const items = columns[col.key] || [];
           return (
             <Paper
               key={col.key}
               variant="outlined"
-              sx={{
-                minWidth: 280,
-                width: 280,
-                flexShrink: 0,
-                minHeight: 420,
-                p: 1.5,
-                bgcolor: 'background.paper',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
+              sx={{ p: 1.5, bgcolor: 'background.paper' }}
             >
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
                 <Typography variant="overline" color={col.color} sx={{ fontWeight: 700 }}>
@@ -129,49 +120,61 @@ export function KanbanBoard({ onOpenProject }: Props) {
                 </Typography>
                 <Chip label={items.length} size="small" variant="outlined" />
               </Stack>
-              <Stack spacing={1.5} sx={{ flexGrow: 1 }}>
-                {items.length === 0 && (
-                  <Typography variant="body2" color="text.disabled" align="center" sx={{ py: 4 }}>
-                    Empty
-                  </Typography>
-                )}
-                {items.map((p) => (
-                  <Card
-                    key={p.id}
-                    variant="outlined"
-                    onMouseEnter={(e) => onEnter(e, p)}
-                    onMouseLeave={onLeave}
-                    sx={{
-                      transition: 'transform 0.15s, box-shadow 0.2s',
-                      '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 },
-                      opacity: p.status === 'completed' ? 0.55 : 1,
-                    }}
-                  >
-                    <CardActionArea onClick={() => onOpenProject(p.id)}>
-                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, textDecoration: p.status === 'completed' ? 'line-through' : 'none' }}>
-                          {p.title}
-                        </Typography>
-                        {p.context && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {p.context}
+              {items.length === 0 ? (
+                <Typography variant="body2" color="text.disabled" align="center" sx={{ py: 3 }}>
+                  Empty
+                </Typography>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, 1fr)',
+                      md: 'repeat(3, 1fr)',
+                      lg: 'repeat(4, 1fr)',
+                    },
+                    gap: 1.5,
+                  }}
+                >
+                  {items.map((p) => (
+                    <Card
+                      key={p.id}
+                      variant="outlined"
+                      onMouseEnter={(e) => onEnter(e, p)}
+                      onMouseLeave={onLeave}
+                      sx={{
+                        transition: 'transform 0.15s, box-shadow 0.2s',
+                        '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 },
+                        opacity: p.status === 'completed' ? 0.55 : 1,
+                      }}
+                    >
+                      <CardActionArea onClick={() => onOpenProject(p.id)}>
+                        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, textDecoration: p.status === 'completed' ? 'line-through' : 'none' }}>
+                            {p.title}
                           </Typography>
-                        )}
-                        <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.75 }}>
-                          <SourceTag source={p.source} />
-                          <Chip label={p.urgency} size="small" color={col.color === 'default' ? 'default' : col.color} variant="outlined" sx={{ textTransform: 'capitalize' }} />
-                          {p.children && p.children.length > 0 && (
-                            <Chip label={`${p.children.length} sub`} size="small" variant="outlined" />
+                          {p.context && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {p.context}
+                            </Typography>
                           )}
-                          {p.dueDate && p.status !== 'completed' && (
-                            <Chip label={formatDue(p.dueDate)} size="small" color="warning" variant="outlined" />
-                          )}
-                        </Stack>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                ))}
-              </Stack>
+                          <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.75 }}>
+                            <SourceTag source={p.source} />
+                            <Chip label={p.urgency} size="small" color={col.color === 'default' ? 'default' : col.color} variant="outlined" sx={{ textTransform: 'capitalize' }} />
+                            {p.children && p.children.length > 0 && (
+                              <Chip label={`${p.children.length} sub`} size="small" variant="outlined" />
+                            )}
+                            {p.dueDate && p.status !== 'completed' && (
+                              <Chip label={formatDue(p.dueDate)} size="small" color="warning" variant="outlined" />
+                            )}
+                          </Stack>
+                        </CardContent>
+                      </CardActionArea>
+                    </Card>
+                  ))}
+                </Box>
+              )}
             </Paper>
           );
         })}
