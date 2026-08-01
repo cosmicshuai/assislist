@@ -76,6 +76,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface Recommendation {
+  task: Task;
+  reason: string;
+}
+
+export interface Recommendations {
+  top_next: Recommendation[];
+  long_term: Recommendation[];
+}
+
 export const api = {
   listTasks: (filters: TaskFilters = {}) => {
     const params = new URLSearchParams();
@@ -100,4 +110,5 @@ export const api = {
     }),
   removeDependency: (taskId: number, depId: number) =>
     request<{ success: boolean }>(`/tasks/${taskId}/dependencies/${depId}`, { method: 'DELETE' }),
+  getRecommendations: () => request<Recommendations>('/recommendations'),
 };

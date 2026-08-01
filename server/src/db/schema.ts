@@ -61,5 +61,27 @@ export const taskDependencies = pgTable(
   ],
 );
 
+export const recommendationKind = pgEnum('recommendation_kind', ['top_next', 'long_term']);
+export const recommendationSource = pgEnum('recommendation_source', ['engine', 'agent']);
+
+export const recommendations = pgTable(
+  'recommendations',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    taskId: integer('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    kind: recommendationKind('kind').notNull(),
+    rank: integer('rank').notNull().default(0),
+    reason: text('reason').notNull().default(''),
+    source: recommendationSource('source').notNull().default('engine'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('uq_recommendations_kind_task').on(t.kind, t.taskId),
+    index('idx_recommendations_kind_rank').on(t.kind, t.rank),
+  ],
+);
+
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
