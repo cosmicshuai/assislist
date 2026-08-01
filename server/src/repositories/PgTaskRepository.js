@@ -92,7 +92,29 @@ export class PgTaskRepository extends TaskRepository {
     }
 
     const rows = await q;
-    return rows.map(normalize);
+    const rowsById = new Map(rows.map((r) => [r.id, r]));
+    const tasksWithBlockers = await this.attachBlockers(rows.map((r) => r.id), rowsById);
+    return tasksWithBlockers;
+  }
+
+  // Efficiently attach blocked_by to a batch of task ids
+  async attachBlockers(ids, rowsById) {
+    if (ids.length === 0) return [];
+    const depRows = await db
+      .select({ taskId: taskDependencies.taskId, blocker: tasks })
+      .from(taskDependencies)
+      .innerJoin(tasks, eq(tasks.id, taskDependencies.dependsOnTaskId))
+      .where(inArray(taskDependencies.taskId, ids));
+    const map = new Map();
+    for (const d of depRows) {
+      const list = map.get(d.taskId) || [];
+      list.push(normalize(d.blocker));
+      map.set(d.taskId, list);
+    }
+    return ids.map((id) => {
+      const t = normalize(rowsById.get(id));
+      return { ...t, blocked_by: map.get(id) || [] };
+    });
   }
 
   async update(id, patch) {
