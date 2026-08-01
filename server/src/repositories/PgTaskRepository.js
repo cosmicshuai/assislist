@@ -1,7 +1,7 @@
 // repositories/PgTaskRepository.js — Postgres implementation (drizzle)
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import { db, pool } from '../db/client.js';
-import { taskDependencies, tasks } from '../db/schema.ts';
+import { recommendations, taskDependencies, tasks } from '../db/schema.ts';
 import {
   DependencyBlockedError,
   DependencyCycleError,
@@ -234,6 +234,52 @@ export class PgTaskRepository extends TaskRepository {
       .orderBy(desc(tasks.createdAt))
       .limit(limit);
     return rows.map(normalize);
+  }
+
+  // --- Agent-written recommendations ---
+
+  // Replace agent recommendations for a kind with the given picks
+  async saveAgentRecommendations(kind, picks) {
+    await db.delete(recommendations).where(eq(recommendations.kind, kind));
+    if (picks.length === 0) return { saved: 0 };
+    let rank = 0;
+    for (const p of picks) {
+      await db.insert(recommendations).values({
+        taskId: p.task_id,
+        kind,
+        rank: rank++,
+        reason: p.reason || '',
+        source: 'agent',
+      }).onConflictDoNothing();
+    }
+    return { saved: picks.length };
+  }
+
+  // Load the most recent agent recommendations for both kinds, with task join
+  async getAgentRecommendations() {
+    const rows = await db
+      .select({ rec: recommendations, task: tasks })
+      .from(recommendations)
+      .innerJoin(tasks, eq(tasks.id, recommendations.taskId))
+      .where(eq(recommendations.source, 'agent'))
+      .orderBy(desc(recommendations.createdAt));
+    const out = { top_next: [], long_term: [], fetchedAt: null };
+    for (const r of rows) {
+      if (!out.fetchedAt) out.fetchedAt = r.rec.createdAt;
+      const entry = { task: normalize(r.task), reason: r.rec.reason };
+      if (r.rec.kind === 'top_next') out.top_next.push(entry);
+      else out.long_term.push(entry);
+    }
+    out.top_next.sort((a, b) => a.task.id - b.task.id);
+    out.long_term.sort((a, b) => a.task.id - b.task.id);
+    return out;
+  }
+
+  // Mark a task abandoned (status + completedAt null; keeps history)
+  async abandon(id) {
+    const task = await this.getById(id);
+    if (task.status === 'abandoned') return task;
+    return this.update(id, { status: 'abandoned' });
   }
 
   async createTree(parent, children) {

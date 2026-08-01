@@ -12,7 +12,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
-export const taskStatus = pgEnum('task_status', ['active', 'completed']);
+export const taskStatus = pgEnum('task_status', ['active', 'completed', 'abandoned']);
 export const priorityLevel = pgEnum('priority_level', ['low', 'medium', 'high', 'urgent']);
 export const taskSource = pgEnum('task_source', ['manual', 'whatsapp']);
 

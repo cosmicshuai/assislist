@@ -8,7 +8,7 @@ const router = Router();
 const repo = new PgTaskRepository();
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
-const STATUSES = ['active', 'completed'];
+const STATUSES = ['active', 'completed', 'abandoned'];
 
 function handleError(res, e) {
   if (e instanceof TaskNotFoundError) return res.status(404).json({ error: e.message });
@@ -111,6 +111,16 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id/complete', async (req, res) => {
   try {
     const task = await repo.complete(Number(req.params.id));
+    res.json(task);
+  } catch (e) {
+    handleError(res, e);
+  }
+});
+
+// PATCH /api/v1/tasks/:id/abandon — mark as abandoned (keeps history)
+router.patch('/:id/abandon', async (req, res) => {
+  try {
+    const task = await repo.abandon(Number(req.params.id));
     res.json(task);
   } catch (e) {
     handleError(res, e);
