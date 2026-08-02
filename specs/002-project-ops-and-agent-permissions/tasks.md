@@ -28,7 +28,7 @@
 - [x] T-015 [FR-010] [AC-001] AddProjectForm (title/context/priority/due) + wire FAB on board | DoD: creating a project shows a new tile | Depends: T-014
 - [x] T-016 [FR-010] [FR-011] [FR-012] KanbanBoard: load projects from /projects; project overflow menu (Archive/Restore/Delete + confirm w/ task count); archived toggle view; muted archived tiles | DoD: add/archive/restore/delete all work from board; archived view toggles | Depends: T-015
 - [x] T-017 [FR-011] [AC-002] ProjectDetail: use GET /projects/:id root_tasks; recursive TaskCard tree (parent expands children, arbitrary depth); per-task ops preserved | DoD: project with 2 root tasks x children renders fully; toggling works | Depends: T-016
-- [ ] T-018 [NFR-004] Mobile/PWA pass: menus, confirms, deep tree on iPhone viewport; empty project state (EC-010) | DoD: mobile viewport check + PWA install smoke | Depends: T-017
+- [x] T-018 [NFR-004] Mobile/PWA pass: menus, confirms, deep tree on iPhone viewport; empty project state (EC-010) | DoD: mobile viewport check + PWA install smoke | Depends: T-017
 
 ## Phase: Skills & cron
 - [x] T-019 [FR-014] [AC-006] capture-to-todos skill: use TODO_AGENT_TOKEN; only add under existing project when user asks; follow permission matrix | DoD: skill doc updated; WhatsApp capture end-to-end works against live server | Depends: T-012
@@ -36,7 +36,7 @@
 
 ## Phase: Tests & docs
 - [x] T-021 [AC-003..007] Automated route tests for agent 403 matrix + user full access + backward compat (no agent token) | DoD: test suite green | Depends: T-011, T-012
-- [ ] T-022 [AC-001..009] E2E verification: browser flow (add/archive/restore/delete, deep tree) + curl agent 403s + capture with/without project_id + README/AGENTS.md update | DoD: full AC checklist passes; README current | Depends: T-016, T-017, T-019, T-021
+- [x] T-022 [AC-001..009] E2E verification: browser flow (add/archive/restore/delete, deep tree) + curl agent 403s + capture with/without project_id + README/AGENTS.md update | DoD: full AC checklist passes; README current | Depends: T-016, T-017, T-019, T-021
 
 ### Dependency Graph
 ```
