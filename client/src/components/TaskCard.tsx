@@ -21,12 +21,13 @@ import { SourceTag } from './SourceTag';
 interface Props {
   task: Task;
   children?: Task[];
+  childrenOf?: Map<number, Task[]>;
   onToggle: (t: Task) => void;
   onDelete: (t: Task) => void;
   onAddSubtask: (parent: Task) => void;
 }
 
-export function TaskCard({ task, children = [], onToggle, onDelete, onAddSubtask }: Props) {
+export function TaskCard({ task, children = [], childrenOf, onToggle, onDelete, onAddSubtask }: Props) {
   const [expanded, setExpanded] = useState(false);
   const blocked = (task.blocked_by || []).filter((b) => b.status !== 'completed');
   const completed = task.status === 'completed';
@@ -117,7 +118,15 @@ export function TaskCard({ task, children = [], onToggle, onDelete, onAddSubtask
         <Collapse in={expanded}>
           <Box sx={{ pl: 4, pr: 2, pb: 1.5, borderTop: 1, borderColor: 'divider', pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
             {children.map((c) => (
-              <TaskCard key={c.id} task={c} onToggle={onToggle} onDelete={onDelete} onAddSubtask={onAddSubtask} />
+              <TaskCard
+                key={c.id}
+                task={c}
+                children={childrenOf?.get(c.id) || []}
+                childrenOf={childrenOf}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onAddSubtask={onAddSubtask}
+              />
             ))}
           </Box>
         </Collapse>

@@ -1,4 +1,4 @@
-// components/Home.tsx — curated agent suggestions: do-next + long-term impact
+// components/Home.tsx — curated agent suggestions: do-next tasks + long-term projects
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -16,10 +16,10 @@ import AddIcon from '@mui/icons-material/Add';
 import BoltIcon from '@mui/icons-material/Bolt';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import type { Recommendations } from '../api/client';
+import type { Project, Recommendations, Task } from '../api/client';
 import { api } from '../api/client';
 import { SourceTag } from './SourceTag';
-import { AddTaskForm } from './AddTaskForm';
+import { AddProjectForm } from './AddProjectForm';
 import { formatDue } from '../lib/utils';
 
 interface Props {
@@ -54,13 +54,12 @@ export function Home({ onOpenProject }: Props) {
   const next = data?.top_next || [];
   const term = data?.long_term || [];
 
-  function Tile({ rec }: { rec: { task: Recommendations['top_next'][0]['task']; reason: string } }) {
-    const { task, reason } = rec;
+  function TaskTile({ task, reason }: { task: Task; reason: string }) {
     const done = task.status === 'completed';
     return (
       <Card
         elevation={0}
-        onClick={() => onOpenProject(task.parentId ?? task.id)}
+        onClick={() => onOpenProject(task.projectId)}
         sx={{
           bgcolor: 'surfaceContainer',
           transition: 'transform 0.18s cubic-bezier(.2,.8,.4,1), box-shadow 0.2s, background-color 0.2s',
@@ -97,9 +96,53 @@ export function Home({ onOpenProject }: Props) {
     );
   }
 
+  function ProjectTile({ project, reason }: { project: Project; reason: string }) {
+    const done = project.status === 'completed';
+    return (
+      <Card
+        elevation={0}
+        onClick={() => onOpenProject(project.id)}
+        sx={{
+          bgcolor: 'surfaceContainer',
+          transition: 'transform 0.18s cubic-bezier(.2,.8,.4,1), box-shadow 0.2s, background-color 0.2s',
+          '&:hover': { transform: 'translateY(-3px)', boxShadow: 8, bgcolor: 'surfaceContainerHigh' },
+          opacity: done ? 0.55 : 1,
+        }}
+      >
+        <CardActionArea>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <Stack direction="row" spacing={1.5} alignItems="flex-start">
+              <Avatar sx={{ width: 40, height: 40, bgcolor: 'tertiaryContainer', color: 'onTertiaryContainer', fontSize: 20 }}>
+                {project.title.charAt(0).toUpperCase()}
+              </Avatar>
+              <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: done ? 'line-through' : 'none' }}>
+                  {project.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.8rem' }}>
+                  {reason}
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack direction="row" spacing={0.75} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 0.75 }}>
+              <SourceTag source={project.source} />
+              <Chip label={project.urgency} size="small" color="primary" variant="outlined" sx={{ textTransform: 'capitalize' }} />
+              {project.totalTaskCount !== undefined && project.totalTaskCount > 0 && (
+                <Chip label={`${project.totalTaskCount} task${project.totalTaskCount === 1 ? '' : 's'}`} size="small" variant="outlined" />
+              )}
+              {project.dueDate && !done && (
+                <Chip label={formatDue(project.dueDate)} size="small" color="warning" variant="outlined" />
+              )}
+            </Stack>
+          </CardContent>
+        </CardActionArea>
+      </Card>
+    );
+  }
+
   return (
     <Box>
-      {showAdd && <Box sx={{ mb: 2 }}><AddTaskForm onCreated={() => { setShowAdd(false); load(); }} /></Box>}
+      {showAdd && <Box sx={{ mb: 2 }}><AddProjectForm onCreated={() => { setShowAdd(false); load(); }} /></Box>}
 
       {/* Top things from Agents */}
       <Box sx={{ mb: 4 }}>
@@ -119,7 +162,7 @@ export function Home({ onOpenProject }: Props) {
         ) : (
           <Stack spacing={1.5}>
             {next.map((rec, i) => (
-              <Box key={rec.task.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'stretch' }}>
+              <Box key={rec.task?.id ?? i} sx={{ display: 'flex', gap: 1.5, alignItems: 'stretch' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 28, flexShrink: 0 }}>
                   <Avatar sx={{ width: 28, height: 28, bgcolor: 'tertiaryContainer', color: 'onTertiaryContainer', fontSize: 14, fontWeight: 700 }}>
                     {i + 1}
@@ -127,7 +170,7 @@ export function Home({ onOpenProject }: Props) {
                   {i < next.length - 1 && <Box sx={{ width: 2, flexGrow: 1, bgcolor: 'divider' }} />}
                 </Box>
                 <Box sx={{ flexGrow: 1, pb: i < next.length - 1 ? 1.5 : 0 }}>
-                  <Tile rec={rec} />
+                  {rec.task && <TaskTile task={rec.task} reason={rec.reason} />}
                 </Box>
               </Box>
             ))}
@@ -155,7 +198,13 @@ export function Home({ onOpenProject }: Props) {
         ) : (
           <Stack spacing={1.5}>
             {term.map((rec) => (
-              <Tile key={rec.task.id} rec={rec} />
+              <Box key={rec.project?.id ?? rec.task?.id}>
+                {rec.project ? (
+                  <ProjectTile project={rec.project} reason={rec.reason} />
+                ) : rec.task ? (
+                  <TaskTile task={rec.task} reason={rec.reason} />
+                ) : null}
+              </Box>
             ))}
           </Stack>
         )}
@@ -163,7 +212,7 @@ export function Home({ onOpenProject }: Props) {
 
       <Fab
         color="primary"
-        aria-label="Add task"
+        aria-label="Add project"
         onClick={() => setShowAdd(true)}
         sx={{ position: 'fixed', right: 24, bottom: 24, zIndex: 1000 }}
       >

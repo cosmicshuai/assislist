@@ -30,6 +30,7 @@ export class DependencyCycleError extends Error {
 /**
  * @typedef {Object} TaskRecord
  * @property {number} id
+ * @property {number} projectId
  * @property {string} title
  * @property {string} context
  * @property {'active'|'completed'} status

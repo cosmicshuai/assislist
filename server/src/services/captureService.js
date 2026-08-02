@@ -1,5 +1,10 @@
 // services/captureService.js — turn a captured todo + breakdown into a task tree
+// Behavior: without project_id, creates a new project (title = captured todo)
+// and its breakdown items become root (parent) tasks. With project_id, adds a
+// parent task + breakdown children under the given project. All rows are
+// source='whatsapp'.
 import { PgTaskRepository } from '../repositories/PgTaskRepository.js';
+import { PgProjectRepository } from '../repositories/PgProjectRepository.js';
 import { deriveUrgency } from './urgencyService.js';
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
@@ -18,6 +23,7 @@ export class CaptureValidationError extends Error {
  * {
  *   title: string,
  *   context?: string,
+ *   project_id?: number,   // optional: target existing project
  *   breakdown?: [
  *     { title: string, context?: string, priority?: string,
  *       due_date?: string, depends_on?: number[] }  // indices into breakdown
@@ -28,12 +34,15 @@ export function validateCapture(body) {
   if (!body || typeof body !== 'object') {
     throw new CaptureValidationError('Body must be a JSON object');
   }
-  const { title, context, breakdown } = body;
+  const { title, context, breakdown, project_id } = body;
   if (!title || typeof title !== 'string' || !title.trim()) {
     throw new CaptureValidationError('title is required (non-empty string)');
   }
   if (context !== undefined && typeof context !== 'string') {
     throw new CaptureValidationError('context must be a string');
+  }
+  if (project_id !== undefined && project_id !== null && !Number.isInteger(Number(project_id))) {
+    throw new CaptureValidationError('project_id must be an integer');
   }
   if (breakdown !== undefined) {
     if (!Array.isArray(breakdown)) {
@@ -67,20 +76,29 @@ export function validateCapture(body) {
       }
     });
   }
-  return { title: title.trim(), context: context ?? '', breakdown };
+  return { title: title.trim(), context: context ?? '', breakdown, projectId: project_id !== undefined && project_id !== null ? Number(project_id) : null };
 }
 
 export async function capture(body) {
   const payload = validateCapture(body);
-  const repo = new PgTaskRepository();
+  const taskRepo = new PgTaskRepository();
+  const projectRepo = new PgProjectRepository();
 
-  const parent = {
-    title: payload.title,
-    context: payload.context,
-    priority: 'medium',
-    urgency: 'medium',
-    source: 'whatsapp',
-  };
+  let projectId = payload.projectId;
+  let createdProject = null;
+
+  if (projectId === null) {
+    // New project from the captured todo; breakdown items become root tasks
+    const project = await projectRepo.create({
+      title: payload.title,
+      context: payload.context,
+      priority: 'medium',
+      urgency: 'medium',
+      source: 'whatsapp',
+    });
+    projectId = project.id;
+    createdProject = project;
+  }
 
   const children = (payload.breakdown || []).map((b) => ({
     title: b.title.trim(),
@@ -93,10 +111,31 @@ export async function capture(body) {
   }));
 
   // Dedupe hint: only for the top-level capture title
-  const similar = await repo.findSimilar(payload.title, 3);
+  const similar = await taskRepo.findSimilar(payload.title, 3);
 
-  const result = await repo.createTree(parent, children);
+  if (payload.projectId === null) {
+    // FR-007 (no project_id): breakdown items become ROOT tasks of the new project
+    const rootTasks = await taskRepo.createRootTasks(projectId, children);
+    return {
+      project: createdProject,
+      task: null, // no parent task; roots carry the breakdown
+      subtasks: rootTasks,
+      similar,
+    };
+  }
+
+  // FR-007 (with project_id): add a parent task + breakdown children under the project
+  const parent = {
+    projectId,
+    title: payload.title,
+    context: payload.context,
+    priority: 'medium',
+    urgency: 'medium',
+    source: 'whatsapp',
+  };
+  const result = await taskRepo.createTree(parent, children);
   return {
+    project: createdProject ?? { id: projectId },
     task: result.parent,
     subtasks: result.children,
     similar,

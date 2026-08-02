@@ -46,18 +46,18 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/v1/recommendations — agent writes its picks (from the 6h cron)
-// Body: { top_next: [{task_id, reason}], long_term: [{task_id, reason}] }
+// Body: { top_next: [{task_id, reason}], long_term: [{project_id, reason}] }
 router.post('/', async (req, res) => {
   try {
     const { top_next = [], long_term = [] } = req.body || {};
     if (!Array.isArray(top_next) || !Array.isArray(long_term)) {
       return res.status(400).json({ error: 'top_next and long_term must be arrays' });
     }
-    const validate = (picks) =>
-      picks.every((p) => p && Number.isInteger(p.task_id) && typeof p.reason === 'string');
+    const validate = (picks, targetKey) =>
+      picks.every((p) => p && Number.isInteger(p[targetKey]) && typeof p.reason === 'string');
 
-    if (!validate(top_next) || !validate(long_term)) {
-      return res.status(400).json({ error: 'picks must be [{task_id:int, reason:string}]' });
+    if (!validate(top_next, 'task_id') || !validate(long_term, 'project_id')) {
+      return res.status(400).json({ error: 'top_next must be [{task_id:int, reason:string}]; long_term must be [{project_id:int, reason:string}]' });
     }
 
     const savedNext = await repo.saveAgentRecommendations('top_next', top_next);

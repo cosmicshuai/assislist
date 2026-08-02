@@ -2,29 +2,42 @@
 
 Personal productivity system: capture tasks from WhatsApp (text/voice), AI
 breaks them into context-rich subtasks with urgency and dependencies, managed
-in a self-hosted web app with a clean mobile-first UI.
+in a self-hosted web app with a clean mobile-first UI. Since spec 002 the
+model is project-first: `project -> parent task -> child task -> ...`, with
+every task carrying the same project_id.
 
 ## Architecture
 
 ```
 WhatsApp (Hermes) ──text/voice──▶ Hermes agent (transcribe + research + breakdown)
-                                      │  POST /api/v1/captures  (Bearer token)
+                                      │  POST /api/v1/captures  (Bearer TODO_AGENT_TOKEN)
                                       ▼
                               Express 5 (ESM) server :3456
+                                      │  authMiddleware → actor: user | agent
                                       ▼
-                      PgTaskRepository (drizzle-orm beta + node-postgres)
+                 PgProjectRepository + PgTaskRepository (drizzle-orm beta + pg)
                                       ▼
                      PostgreSQL 16 (dev-infra, DB todo_system)
                                       ▲
-                      React 19 + Vite + Tailwind v4 + PWA (client/)
+                      React 19 + Vite + MUI v7 + PWA (client/)
 ```
 
 ## Stack
 
 - **Server**: Node 25, Express 5 (ESM), drizzle-orm beta + node-postgres
 - **DB**: dev-infra PostgreSQL 16, database `todo_system` (peer auth as cosmic)
-- **Client**: React 19 + Vite + Tailwind CSS v4 + vite-plugin-pwa
+- **Client**: React 19 + Vite + MUI v7 (Material 3) + vite-plugin-pwa
 - **SDD**: spec-driven development (see .specify/, specs/)
+
+## Model
+
+- **projects**: first-class entity (id, title, context, status
+  active/completed/abandoned/archived, priority, urgency, due, source).
+- **tasks**: belong to exactly one project (`project_id` NOT NULL FK,
+  cascade); `parent_id` gives arbitrary-depth nesting. Root tasks
+  (`parent_id IS NULL`) are a project's "parent tasks".
+- Archive lives on the project: archived projects are hidden from the active
+  board and excluded from recommendations; their tasks are preserved.
 
 ## Running
 
@@ -33,6 +46,7 @@ WhatsApp (Hermes) ──text/voice──▶ Hermes agent (transcribe + research 
 ```bash
 cd server
 cp .env.example .env   # then set TODO_API_TOKEN (openssl rand -hex 32)
+                       # optional TODO_AGENT_TOKEN for agent-scoped writes
 npm install
 npm run dev            # or: npm start
 ```
@@ -94,16 +108,36 @@ Auth: `Authorization: Bearer <TODO_API_TOKEN>` (all except /health).
 | Method | Path | Purpose |
 |---|---|---|
 | GET | /api/v1/health | liveness |
-| POST | /api/v1/captures | AI breakdown → task tree |
-| GET | /api/v1/tasks | list + filters (status, priority, urgency, due, q, parent_id, sort) |
+| GET | /api/v1/projects | list (excludes archived by default; ?archived=true) |
+| GET | /api/v1/projects/:id | detail + root tasks + counts |
+| POST | /api/v1/projects | create project (user only; agent 403) |
+| PATCH | /api/v1/projects/:id | update project (agent 403) |
+| PATCH | /api/v1/projects/:id/archive | archive (agent 403) |
+| PATCH | /api/v1/projects/:id/restore | restore (agent 403) |
+| DELETE | /api/v1/projects/:id | delete project (cascades all tasks; agent 403) |
+| POST | /api/v1/captures | AI breakdown → project + root tasks, or task tree under existing project_id |
+| GET | /api/v1/tasks | list + filters (status, priority, urgency, due, q, project_id, parent_id, sort) |
 | GET | /api/v1/tasks/:id | detail + children + blocked_by + blocks |
-| POST | /api/v1/tasks | create single |
-| PUT | /api/v1/tasks/:id | update |
-| PATCH | /api/v1/tasks/:id/complete | complete (strict dependency block) |
-| DELETE | /api/v1/tasks/:id | delete (cascades children + deps) |
+| POST | /api/v1/tasks | create single (project_id required; agent: subtasks only) |
+| PUT | /api/v1/tasks/:id | update (agent: source=whatsapp only) |
+| PATCH | /api/v1/tasks/:id/complete | complete (strict dependency block; agent: own tasks only) |
+| PATCH | /api/v1/tasks/:id/abandon | abandon (agent: own tasks only) |
+| DELETE | /api/v1/tasks/:id | delete (cascades children + deps; agent: own tasks only) |
 | POST | /api/v1/tasks/:id/dependencies | add dependency (cycle-rejected) |
 | DELETE | /api/v1/tasks/:id/dependencies/:depId | remove dependency |
-| GET | /api/v1/recommendations?ai=1 | agent suggestions (top_next + long_term); `ai=1` enriches reasons via DeepSeek if DEEPSEEK_API_KEY is set |
+| GET | /api/v1/recommendations?ai=1 | agent suggestions (top_next tasks + long_term projects); `ai=1` enriches reasons via DeepSeek if DEEPSEEK_API_KEY is set |
+| POST | /api/v1/recommendations | agent writes picks: top_next [{task_id, reason}], long_term [{project_id, reason}] |
+
+## Agent permissions
+
+Two bearer tokens:
+- `TODO_API_TOKEN` — user/UI scope: full access.
+- `TODO_AGENT_TOKEN` — agent scope: GET anything; POST /captures; add
+  subtasks (POST /tasks with parent_id); edit/complete/abandon/delete only
+  source=whatsapp tasks. Everything else (modifying source=manual tasks,
+  creating projects, root tasks, archive/restore) returns 403.
+- If TODO_AGENT_TOKEN is unset, the server runs single-token mode and all
+  valid requests are user-scoped (backward compatible).
 
 ## Backups
 

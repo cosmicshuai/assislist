@@ -3,13 +3,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PgTaskRepository } from '../src/repositories/PgTaskRepository.js';
+import { PgProjectRepository } from '../src/repositories/PgProjectRepository.js';
 import { deriveUrgency } from '../src/services/urgencyService.js';
 import { DependencyBlockedError, DependencyCycleError } from '../src/repositories/TaskRepository.js';
 
 const repo = new PgTaskRepository();
+const projectRepo = new PgProjectRepository();
 
 async function cleanup(id) {
   try { await repo.delete(id); } catch { /* already gone */ }
+}
+
+// Create a scratch project for a test; returns { projectId, done() }
+async function withProject() {
+  const p = await projectRepo.create({ title: `test-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` });
+  return {
+    projectId: p.id,
+    done: async () => { try { await projectRepo.delete(p.id); } catch { /* already gone */ } },
+  };
 }
 
 test('deriveUrgency: no due date returns priority', () => {
@@ -27,48 +38,58 @@ test('deriveUrgency: due within a week with medium priority is high', () => {
   assert.equal(deriveUrgency({ priority: 'medium', dueDate: week }), 'high');
 });
 
-test('repo: create + get + children', async () => {
-  const p = await repo.create({ title: 'Parent test', source: 'whatsapp' });
-  const a = await repo.create({ title: 'Child A', parentId: p.id });
-  const b = await repo.create({ title: 'Child B', parentId: p.id });
+test('repo: create + get + children (project-scoped)', async () => {
+  const { projectId, done } = await withProject();
+  const p = await repo.create({ projectId, title: 'Parent test', source: 'whatsapp' });
+  const a = await repo.create({ projectId, title: 'Child A', parentId: p.id });
+  const b = await repo.create({ projectId, title: 'Child B', parentId: p.id });
   const kids = await repo.getChildren(p.id);
   assert.equal(kids.length, 2);
   const got = await repo.getById(p.id);
   assert.equal(got.title, 'Parent test');
+  assert.equal(got.projectId, projectId);
   await cleanup(p.id);
+  await done();
 });
 
 test('repo: strict block — cannot complete blocked task', async () => {
-  const p = await repo.create({ title: 'Block parent' });
-  const a = await repo.create({ title: 'Blocker', parentId: p.id });
-  const b = await repo.create({ title: 'Blocked task', parentId: p.id });
+  const { projectId, done } = await withProject();
+  const p = await repo.create({ projectId, title: 'Block parent' });
+  const a = await repo.create({ projectId, title: 'Blocker', parentId: p.id });
+  const b = await repo.create({ projectId, title: 'Blocked task', parentId: p.id });
   await repo.addDependency(b.id, a.id);
   await assert.rejects(() => repo.complete(b.id), DependencyBlockedError);
   await repo.complete(a.id);
-  const done = await repo.complete(b.id);
-  assert.equal(done.status, 'completed');
+  const done2 = await repo.complete(b.id);
+  assert.equal(done2.status, 'completed');
   await cleanup(p.id);
+  await done();
 });
 
 test('repo: cycle rejection', async () => {
-  const p = await repo.create({ title: 'Cycle parent' });
-  const a = await repo.create({ title: 'A', parentId: p.id });
-  const b = await repo.create({ title: 'B', parentId: p.id });
+  const { projectId, done } = await withProject();
+  const p = await repo.create({ projectId, title: 'Cycle parent' });
+  const a = await repo.create({ projectId, title: 'A', parentId: p.id });
+  const b = await repo.create({ projectId, title: 'B', parentId: p.id });
   await repo.addDependency(a.id, b.id);
   await assert.rejects(() => repo.addDependency(b.id, a.id), DependencyCycleError);
   await cleanup(p.id);
+  await done();
 });
 
 test('repo: self dependency rejected', async () => {
-  const p = await repo.create({ title: 'Self parent' });
-  const a = await repo.create({ title: 'Self', parentId: p.id });
+  const { projectId, done } = await withProject();
+  const p = await repo.create({ projectId, title: 'Self parent' });
+  const a = await repo.create({ projectId, title: 'Self', parentId: p.id });
   await assert.rejects(() => repo.addDependency(a.id, a.id), DependencyCycleError);
   await cleanup(p.id);
+  await done();
 });
 
-test('repo: createTree wires parent, children, deps', async () => {
+test('repo: createTree wires parent, children, deps (project-scoped)', async () => {
+  const { projectId, done } = await withProject();
   const { parent, children } = await repo.createTree(
-    { title: 'Tree parent', priority: 'high' },
+    { projectId, title: 'Tree parent', priority: 'high' },
     [
       { title: 'Step 1' },
       { title: 'Step 2', dependsOn: [0] },
@@ -76,10 +97,40 @@ test('repo: createTree wires parent, children, deps', async () => {
     ],
   );
   assert.equal(children.length, 3);
+  assert.equal(parent.projectId, projectId);
   const blockers2 = await repo.getBlockedBy(children[1].id);
   assert.equal(blockers2.length, 1);
   assert.equal(blockers2[0].title, 'Step 1');
   const blockers3 = await repo.getBlockedBy(children[2].id);
   assert.equal(blockers3.length, 2);
   await cleanup(parent.id);
+  await done();
+});
+
+test('repo: createRootTasks makes breakdown items root tasks', async () => {
+  const { projectId, done } = await withProject();
+  const roots = await repo.createRootTasks(projectId, [
+    { title: 'Root 1' },
+    { title: 'Root 2', dependsOn: [0] },
+  ]);
+  assert.equal(roots.length, 2);
+  assert.equal(roots[0].parentId, null);
+  assert.equal(roots[0].projectId, projectId);
+  const blockers = await repo.getBlockedBy(roots[1].id);
+  assert.equal(blockers.length, 1);
+  for (const r of roots) await cleanup(r.id);
+  await done();
+});
+
+test('repo: cross-project parent rejected', async () => {
+  const a = await withProject();
+  const b = await withProject();
+  const t1 = await repo.create({ projectId: a.projectId, title: 'In A' });
+  await assert.rejects(
+    () => repo.create({ projectId: b.projectId, parentId: t1.id, title: 'Bad' }),
+    /different project/,
+  );
+  await cleanup(t1.id);
+  await a.done();
+  await b.done();
 });

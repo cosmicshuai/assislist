@@ -1,4 +1,4 @@
-// components/AddTaskForm.tsx — quick add task (MUI)
+// components/AddProjectForm.tsx — quick add project (MUI)
 import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -11,13 +11,11 @@ import { api } from '../api/client';
 
 interface Props {
   onCreated: () => void;
-  projectId?: number | null;
-  parentId?: number | null;
 }
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 
-export function AddTaskForm({ onCreated, projectId = null, parentId = null }: Props) {
+export function AddProjectForm({ onCreated }: Props) {
   const [title, setTitle] = useState('');
   const [context, setContext] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
@@ -30,19 +28,17 @@ export function AddTaskForm({ onCreated, projectId = null, parentId = null }: Pr
     setSubmitting(true);
     setError(null);
     try {
-      await api.createTask({
+      await api.createProject({
         title: title.trim(),
         context: context.trim(),
         priority,
-        projectId: projectId ?? undefined,
-        parentId,
       });
       setTitle('');
       setContext('');
       setPriority('medium');
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create task');
+      setError(err instanceof Error ? err.message : 'Failed to create project');
     } finally {
       setSubmitting(false);
     }
@@ -55,7 +51,7 @@ export function AddTaskForm({ onCreated, projectId = null, parentId = null }: Pr
           <TextField
             size="small"
             fullWidth
-            label="Task title"
+            label="Project title"
             placeholder="e.g. Plan Italy trip"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
