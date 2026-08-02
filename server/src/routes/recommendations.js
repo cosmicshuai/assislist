@@ -16,14 +16,25 @@ router.get('/', async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 3, 6);
 
-    // Prefer fresh agent picks
+    // Prefer fresh agent picks, but never surface completed/abandoned items
     const agent = await repo.getAgentRecommendations();
     const fresh = agent.fetchedAt && Date.now() - new Date(agent.fetchedAt).getTime() < AGENT_TTL_MS;
     let result;
     if (fresh && agent.top_next.length + agent.long_term.length > 0) {
+      // If filtering emptied one section (e.g. all recommended tasks got
+      // completed), fall back to the rule engine for that section only.
+      const needNext = agent.top_next.length === 0;
+      const needTerm = agent.long_term.length === 0;
+      const [engineNext, engineTerm] =
+        needNext || needTerm
+          ? await Promise.all([
+              needNext ? topNext(limit) : Promise.resolve([]),
+              needTerm ? longTerm(limit) : Promise.resolve([]),
+            ])
+          : [null, null];
       result = {
-        top_next: agent.top_next.slice(0, limit),
-        long_term: agent.long_term.slice(0, limit),
+        top_next: agent.top_next.length > 0 ? agent.top_next.slice(0, limit) : engineNext,
+        long_term: agent.long_term.length > 0 ? agent.long_term.slice(0, limit) : engineTerm,
         ai: true,
         source: 'agent',
         refreshed: agent.fetchedAt,

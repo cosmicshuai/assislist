@@ -311,12 +311,13 @@ export class PgTaskRepository extends TaskRepository {
       const entry = { reason: r.rec.reason };
       if (r.rec.kind === 'top_next') {
         if (!r.task) continue; // task deleted -> skip
+        if (r.task.status !== 'active') continue; // completed/abandoned -> never recommend
         if (archivedProjectIds.has(r.task.projectId)) continue; // FR-013: skip archived project tasks
         entry.task = normalize(r.task);
         out.top_next.push(entry);
       } else {
         if (!r.project) continue; // project deleted -> skip
-        if (r.project.status === 'archived') continue; // FR-013: skip archived
+        if (r.project.status !== 'active') continue; // completed/abandoned -> never recommend
         entry.project = normalizeProject(r.project);
         out.long_term.push(entry);
       }
