@@ -135,13 +135,21 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
           aria-expanded={open}
           onClick={handleClick}
           sx={{
+            width: 84,
+            height: 84,
+            borderRadius: '26px',
             transition: 'box-shadow 0.2s, transform 0.2s',
             '&:hover': { transform: 'scale(1.04)' },
           }}
         >
           <Box
             component="span"
-            sx={{ display: 'inline-flex', transition: 'transform 0.25s cubic-bezier(.2,.8,.4,1)', transform: open ? 'rotate(135deg)' : 'rotate(0deg)' }}
+            sx={{
+              display: 'inline-flex',
+              transition: 'transform 0.25s cubic-bezier(.2,.8,.4,1)',
+              transform: open ? 'rotate(135deg)' : 'rotate(0deg)',
+              '& svg': { fontSize: '2.25rem' },
+            }}
           >
             <AddIcon />
           </Box>
