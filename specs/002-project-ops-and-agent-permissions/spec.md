@@ -108,6 +108,16 @@ to v2").
   authenticate with TODO_AGENT_TOKEN and follow the permission matrix;
   capture skill only adds tasks under an existing project when the user asks
   to break down that project.
+- [x] FR-015 (MUST): Global Add chooser — the Add button (FAB on Home and
+  Board) opens a chooser with "New project" and "New task". Choosing New
+  project shows AddProjectForm; New task shows the task form.
+- [x] FR-016 (MUST): Task form with project + parent selectors — the task
+  form (both from the chooser and in ProjectDetail) has: project selector
+  (required; lists non-archived projects, defaults to current project in
+  ProjectDetail), optional parent-task selector (lists EVERY task in the
+  selected project at any depth, refreshed when the project changes,
+  "none" = root task), plus title/context/priority. Selecting a parent
+  creates the task under it; otherwise a root task is created.
 
 ## 4. Non-Functional Requirements
 - [ ] NFR-001 (MUST): Fresh start — existing data is dropped (user decision
@@ -144,6 +154,10 @@ to v2").
 - [ ] AC-009: Existing schema replaced cleanly (drop + recreate, or new
   migration that drops old tables); fresh DB has projects + tasks tables with
   FK constraints; API works against empty data.
+- [x] AC-010: From the board/Home FAB, the user can choose to create a
+  project or a task. Task creation requires selecting a project; the parent
+  selector lists all tasks in that project (any depth) and creating with a
+  parent nests the new task under it.
 
 ## 6. Edge Cases
 - [ ] EC-001: Agent attempts to archive/restore a user-created project → 403
@@ -223,4 +237,8 @@ to v2").
 - 2026-08-01: v0.1.2 — Q2 RESOLVED by user decision: drop all current data,
   no migration; clean schema apply. NFR-001/AC-009 updated.
 - 2026-08-01: v1.0.0 — Q3..Q7 RESOLVED by user (defaults accepted). Spec
-  locked, approved. Next: plan.md, tasks.md, implement.
+  locked, approved.
+- 2026-08-02: v1.1.0 — FR-015/FR-016 + AC-010 added (user request): global
+  Add chooser (project | task); task form has project selector (required) +
+  optional parent selector listing all tasks in the project at any depth.
+  Approved by user via clarify (parent = all tasks).

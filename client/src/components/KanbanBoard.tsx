@@ -9,7 +9,6 @@ import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Fab from '@mui/material/Fab';
 import Popper from '@mui/material/Popper';
 import Fade from '@mui/material/Fade';
 import Stack from '@mui/material/Stack';
@@ -26,7 +25,6 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import AddIcon from '@mui/icons-material/Add';
 import BoltIcon from '@mui/icons-material/Bolt';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AdjustIcon from '@mui/icons-material/Adjust';
@@ -41,11 +39,15 @@ import { api } from '../api/client';
 import { useProjects } from '../hooks/useProjects';
 import { SourceTag } from './SourceTag';
 import { AddProjectForm } from './AddProjectForm';
+import { AddTaskForm } from './AddTaskForm';
+import { AddFab } from './AddFab';
 import { formatDue } from '../lib/utils';
 
 interface Props {
   onOpenProject: (id: number) => void;
 }
+
+type AddMode = 'project' | 'task' | null;
 
 const COLUMNS = [
   { key: 'urgent', label: 'Urgent', icon: <BoltIcon />, container: 'errorContainer' as const, onContainer: 'onErrorContainer' as const, chip: 'error' as const },
@@ -58,7 +60,7 @@ const COLUMNS = [
 export function KanbanBoard({ onOpenProject }: Props) {
   const [showArchived, setShowArchived] = useState(false);
   const { projects, loading, error, reload } = useProjects({ archived: showArchived ? true : false });
-  const [showAdd, setShowAdd] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode>(null);
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [hoverProject, setHoverProject] = useState<Project | null>(null);
@@ -146,7 +148,16 @@ export function KanbanBoard({ onOpenProject }: Props) {
         </ToggleButtonGroup>
       </Stack>
 
-      {showAdd && <Box sx={{ mb: 2 }}><AddProjectForm onCreated={() => { setShowAdd(false); reload(); }} /></Box>}
+      {addMode === 'project' && (
+        <Box sx={{ mb: 2 }}>
+          <AddProjectForm onCreated={() => { setAddMode(null); reload(); }} />
+        </Box>
+      )}
+      {addMode === 'task' && (
+        <Box sx={{ mb: 2 }}>
+          <AddTaskForm onCreated={() => { setAddMode(null); reload(); }} />
+        </Box>
+      )}
 
       {showArchived ? (
         <Stack spacing={1.5}>
@@ -257,9 +268,10 @@ export function KanbanBoard({ onOpenProject }: Props) {
         </Stack>
       )}
 
-      <Fab color="primary" aria-label="Add project" onClick={() => setShowAdd(true)} sx={{ position: 'fixed', right: 24, bottom: 24, zIndex: 1000 }}>
-        <AddIcon />
-      </Fab>
+      <AddFab
+        onAddProject={() => setAddMode('project')}
+        onAddTask={() => setAddMode('task')}
+      />
 
       {/* Project action menu */}
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>

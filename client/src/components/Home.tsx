@@ -9,10 +9,8 @@ import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Fab from '@mui/material/Fab';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
-import AddIcon from '@mui/icons-material/Add';
 import BoltIcon from '@mui/icons-material/Bolt';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -20,17 +18,21 @@ import type { Project, Recommendations, Task } from '../api/client';
 import { api } from '../api/client';
 import { SourceTag } from './SourceTag';
 import { AddProjectForm } from './AddProjectForm';
+import { AddTaskForm } from './AddTaskForm';
+import { AddFab } from './AddFab';
 import { formatDue } from '../lib/utils';
 
 interface Props {
   onOpenProject: (id: number) => void;
 }
 
+type AddMode = 'project' | 'task' | null;
+
 export function Home({ onOpenProject }: Props) {
   const [data, setData] = useState<Recommendations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode>(null);
 
   async function load() {
     setLoading(true);
@@ -142,7 +144,16 @@ export function Home({ onOpenProject }: Props) {
 
   return (
     <Box>
-      {showAdd && <Box sx={{ mb: 2 }}><AddProjectForm onCreated={() => { setShowAdd(false); load(); }} /></Box>}
+      {addMode === 'project' && (
+        <Box sx={{ mb: 2 }}>
+          <AddProjectForm onCreated={() => { setAddMode(null); load(); }} />
+        </Box>
+      )}
+      {addMode === 'task' && (
+        <Box sx={{ mb: 2 }}>
+          <AddTaskForm onCreated={() => { setAddMode(null); load(); }} />
+        </Box>
+      )}
 
       {/* Top things from Agents */}
       <Box sx={{ mb: 4 }}>
@@ -210,14 +221,10 @@ export function Home({ onOpenProject }: Props) {
         )}
       </Box>
 
-      <Fab
-        color="primary"
-        aria-label="Add project"
-        onClick={() => setShowAdd(true)}
-        sx={{ position: 'fixed', right: 24, bottom: 24, zIndex: 1000 }}
-      >
-        <AddIcon />
-      </Fab>
+      <AddFab
+        onAddProject={() => setAddMode('project')}
+        onAddTask={() => setAddMode('task')}
+      />
     </Box>
   );
 }
