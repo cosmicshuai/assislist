@@ -107,14 +107,17 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
                 onClick={() => runAction(action)}
                 aria-label={action.label}
                 sx={{
-                  bgcolor: 'surfaceContainerHigh',
-                  color: 'onSurface',
+                  bgcolor: 'primaryContainer',
+                  color: 'onPrimaryContainer',
                   borderRadius: '16px',
                   textTransform: 'none',
                   fontWeight: 550,
                   fontSize: '0.875rem',
                   boxShadow: 3,
-                  '&:hover': { bgcolor: 'surfaceContainerHighest' },
+                  border: '1px solid',
+                  borderColor: 'onPrimaryContainer',
+                  opacity: 0.95,
+                  '&:hover': { bgcolor: 'primaryContainer', opacity: 1, transform: 'scale(1.03)' },
                 }}
               >
                 {action.icon}
