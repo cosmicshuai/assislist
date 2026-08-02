@@ -70,8 +70,8 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
   };
 
   const actions: Action[] = [
-    { key: 'project', icon: <FolderOpenIcon fontSize="small" />, label: 'New project', onClick: onAddProject },
-    { key: 'task', icon: <TaskAltIcon fontSize="small" />, label: 'New task', onClick: onAddTask },
+    { key: 'project', icon: <FolderOpenIcon />, label: 'New project', onClick: onAddProject },
+    { key: 'task', icon: <TaskAltIcon />, label: 'New task', onClick: onAddTask },
   ];
 
   return (
@@ -87,7 +87,7 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
       <Stack
         direction="column"
         alignItems="flex-end"
-        spacing={1}
+        spacing={1.5}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         sx={{ position: 'fixed', right: 24, bottom: 24, zIndex: 1100 }}
@@ -103,16 +103,18 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
             >
               <Fab
                 variant="extended"
-                size="medium"
+                size="large"
                 onClick={() => runAction(action)}
                 aria-label={action.label}
                 sx={{
                   bgcolor: 'primaryContainer',
                   color: 'onPrimaryContainer',
-                  borderRadius: '16px',
+                  borderRadius: '22px',
                   textTransform: 'none',
                   fontWeight: 550,
-                  fontSize: '0.875rem',
+                  fontSize: '1.3125rem',
+                  height: 72,
+                  px: 3.25,
                   boxShadow: 3,
                   border: '1px solid',
                   borderColor: 'onPrimaryContainer',
@@ -120,8 +122,8 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
                   '&:hover': { bgcolor: 'primaryContainer', opacity: 1, transform: 'scale(1.03)' },
                 }}
               >
-                {action.icon}
-                <Box component="span" sx={{ ml: 0.75 }}>{action.label}</Box>
+                <Box component="span" sx={{ display: 'inline-flex', lineHeight: 1, '& svg': { fontSize: '1.875rem' } }}>{action.icon}</Box>
+                <Box component="span" sx={{ ml: 1.25 }}>{action.label}</Box>
               </Fab>
             </Grow>
           ))}
