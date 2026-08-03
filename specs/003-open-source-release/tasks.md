@@ -145,10 +145,12 @@ Legend: [P] = parallelizable. Each task ≤ 1 day. DoD = definition of done.
   | PRIVATE; needs one user action to make public (gh auth refresh
   | -s write:packages, or GitHub UI: Packages → assislist → Settings →
   | Change visibility → Public).
-- [ ] T-021 [AC-001..006] Full AC walkthrough + update README badges with
+- [x] T-021 [AC-001..006] Full AC walkthrough + update README badges with
   real CI status; final commit.
   | DoD: all six ACs verified; repo in shippable state.
   | Depends: T-020
+  | Verified 2026-08-02: badges added (CI green, MIT, GHCR link); AC-001..006
+  | walkthrough below. AC-005 pending GHCR visibility flip (user action).
 
 ## Dependency Graph
 ```

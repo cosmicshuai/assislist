@@ -5,6 +5,10 @@ your AI agent, let the agent break them into context-rich subtasks with
 urgency and dependencies, and manage everything in a clean mobile-first web
 app.
 
+[![CI](https://github.com/cosmicshuai/assislist/actions/workflows/ci.yml/badge.svg)](https://github.com/cosmicshuai/assislist/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fcosmicshuai%2Fassislist-blue?logo=docker)](https://github.com/cosmicshuai/assislist/pkgs/container/assislist)
+
 - **Project-first model**: `project → parent task → child task → …` — every
   task carries the same `project_id`; arbitrary nesting depth.
 - **Agent-friendly API**: stable IDs, machine-readable status/urgency,
