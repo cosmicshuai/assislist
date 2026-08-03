@@ -5,6 +5,7 @@ import { PgTaskRepository } from '../repositories/PgTaskRepository.js';
 import { ProjectNotFoundError } from '../repositories/ProjectRepository.js';
 import { deriveUrgency } from '../services/urgencyService.js';
 import { agentForbidden, agentCanModifyProject, isAgent } from '../middleware/agentGuard.js';
+import { BadRequestError, requireId } from '../lib/params.js';
 
 const router = Router();
 const repo = new PgProjectRepository();
@@ -14,6 +15,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const STATUSES = ['active', 'completed', 'abandoned', 'archived'];
 
 function handleError(res, e) {
+  if (e instanceof BadRequestError) return res.status(e.status).json({ error: e.message });
   if (e instanceof ProjectNotFoundError) return res.status(404).json({ error: e.message });
   console.error(e);
   return res.status(500).json({ error: 'Internal error' });
@@ -33,7 +35,7 @@ router.get('/', async (req, res) => {
 // GET /api/v1/projects/:id — detail + root tasks + counts
 router.get('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const project = await repo.getById(id);
     const rootTasks = await taskRepo.list({ projectId: id, parentId: null });
     const counts = (await repo.attachCounts([id]))[0] || {};
@@ -67,7 +69,7 @@ router.post('/', async (req, res) => {
 // PATCH /api/v1/projects/:id — update (agent 403)
 router.patch('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const project = await repo.getById(id);
     if (!agentCanModifyProject(req, project)) return agentForbidden(res, 'projects');
     const { title, context, priority, due_date, status } = req.body;
@@ -102,7 +104,7 @@ router.patch('/:id', async (req, res) => {
 // PATCH /api/v1/projects/:id/archive — status -> archived (agent 403)
 router.patch('/:id/archive', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const project = await repo.getById(id);
     if (!agentCanModifyProject(req, project)) return agentForbidden(res, 'projects');
     res.json(await repo.archive(id));
@@ -114,7 +116,7 @@ router.patch('/:id/archive', async (req, res) => {
 // PATCH /api/v1/projects/:id/restore — status -> active (agent 403)
 router.patch('/:id/restore', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const project = await repo.getById(id);
     if (!agentCanModifyProject(req, project)) return agentForbidden(res, 'projects');
     res.json(await repo.restore(id));
@@ -126,7 +128,7 @@ router.patch('/:id/restore', async (req, res) => {
 // DELETE /api/v1/projects/:id — hard cascade delete (agent 403)
 router.delete('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const project = await repo.getById(id);
     if (!agentCanModifyProject(req, project)) return agentForbidden(res, 'projects');
     res.json(await repo.delete(id));

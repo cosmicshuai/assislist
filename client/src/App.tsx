@@ -12,6 +12,8 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuth } from './components/AuthGate';
 import { Home } from './components/Home';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ProjectDetail } from './components/ProjectDetail';
@@ -23,6 +25,7 @@ export default function App() {
   const [view, setView] = useState<View>('home');
   const [projectId, setProjectId] = useState<number | null>(null);
   const { theme, toggle } = useTheme();
+  const { logout } = useAuth();
 
   const openProject = (id: number) => setProjectId(id);
   const backHome = () => { setProjectId(null); setView('home'); };
@@ -38,7 +41,7 @@ export default function App() {
         <Toolbar sx={{ gap: 1 }}>
           <CheckCircleOutlineIcon color="primary" />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Todo System
+            AssisList
           </Typography>
           {projectId === null && (
             <ToggleButtonGroup
@@ -58,6 +61,9 @@ export default function App() {
           )}
           <IconButton onClick={toggle} color="inherit" aria-label="Toggle theme">
             {theme === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+          <IconButton onClick={logout} color="inherit" aria-label="Lock">
+            <LogoutIcon />
           </IconButton>
         </Toolbar>
       </AppBar>

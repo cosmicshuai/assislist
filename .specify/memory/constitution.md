@@ -28,6 +28,10 @@ can read and write it programmatically.
   AMENDED 2026-08-02 (spec 003): project is open-source (MIT) and
   distributable — self-hosted via Docker Compose, single-user trust model,
   bring-your-own-network security. No SSO/login screens in v1.
+  AMENDED 2026-08-03 (issue #2): still no user accounts and no SSO, but the
+  single shared token must not be shipped to the browser. A token-unlock
+  screen exchanging TODO_API_TOKEN for an httpOnly session cookie is a
+  security control, not a user-account system, and is explicitly in scope.
 - P7: Incremental. MVP spec first; advanced features in later NNN folders.
 - P8: Clean UX. The UI must feel better than Vikunja's — fast, focused,
   mobile-usable. No heavy framework chrome.

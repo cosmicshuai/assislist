@@ -4,6 +4,7 @@ import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import './index.css'
 import App from './App.tsx'
+import { AuthGate } from './components/AuthGate.tsx'
 import { ThemeProvider, useTheme } from './context/ThemeContext.tsx'
 import { getTheme } from './theme.ts'
 
@@ -12,7 +13,9 @@ function Root() {
   return (
     <MuiThemeProvider theme={getTheme(theme)}>
       <CssBaseline />
-      <App />
+      <AuthGate>
+        <App />
+      </AuthGate>
     </MuiThemeProvider>
   );
 }

@@ -1,7 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0f172a"/>
-  <path d="M160 160h192a16 16 0 0 1 0 32H160a16 16 0 0 1 0-32zm0 80h192a16 16 0 0 1 0 32H160a16 16 0 0 1 0-32zm0 80h128a16 16 0 0 1 0 32H160a16 16 0 0 1 0-32z" fill="#22d3ee"/>
-  <circle cx="400" cy="176" r="28" fill="#a78bfa"/>
-  <circle cx="400" cy="256" r="28" fill="#a78bfa"/>
-  <circle cx="400" cy="336" r="28" fill="#a78bfa"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AssisList">
+  <rect width="512" height="512" rx="113" fill="#003cad"/>
+  <g fill="#e3dfff">
+    <rect x="82" y="120" width="256" height="44" rx="22"/>
+    <rect x="82" y="234" width="256" height="44" rx="22"/>
+    <rect x="82" y="348" width="184" height="44" rx="22"/>
+  </g>
+  <g fill="#f1b7cb">
+    <circle cx="404" cy="142" r="38"/>
+    <circle cx="404" cy="256" r="38"/>
+    <circle cx="404" cy="370" r="38"/>
+  </g>
 </svg>

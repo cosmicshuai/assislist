@@ -134,3 +134,28 @@ test('repo: cross-project parent rejected', async () => {
   await a.done();
   await b.done();
 });
+
+test('repo: parentId null filters to root tasks only', async () => {
+  const { projectId, done } = await withProject();
+  const root = await repo.create({ projectId, title: 'Root only' });
+  const child = await repo.create({ projectId, title: 'A child', parentId: root.id });
+
+  // null means "parent_id IS NULL". Treating it as "no filter" made
+  // GET /projects/:id return the whole tree under the name root_tasks.
+  const roots = await repo.list({ projectId, parentId: null });
+  assert.equal(roots.length, 1);
+  assert.equal(roots[0].id, root.id);
+
+  // undefined still means no filter at all.
+  const all = await repo.list({ projectId });
+  assert.equal(all.length, 2);
+
+  // An explicit parent id still selects that parent's children.
+  const kids = await repo.list({ projectId, parentId: root.id });
+  assert.equal(kids.length, 1);
+  assert.equal(kids[0].id, child.id);
+
+  await cleanup(child.id);
+  await cleanup(root.id);
+  await done();
+});

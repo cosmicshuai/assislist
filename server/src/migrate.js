@@ -4,13 +4,13 @@ import path from 'node:path';
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { config } from './config.js';
 import * as schema from './db/schema.ts';
+import { poolConfig } from './db/poolConfig.js';
 
 const { Pool } = pg;
 
 export async function runMigrations() {
-  const pool = new Pool({ connectionString: config.databaseUrl });
+  const pool = new Pool(poolConfig());
   const db = drizzle({ client: pool, schema });
   const migrationsFolder = path.resolve(import.meta.dirname, '../drizzle');
   await migrate(db, { migrationsFolder });

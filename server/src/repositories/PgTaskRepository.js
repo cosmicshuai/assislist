@@ -1,5 +1,5 @@
 // repositories/PgTaskRepository.js — Postgres implementation (drizzle)
-import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { db, pool } from '../db/client.js';
 import { projects, recommendations, taskDependencies, tasks } from '../db/schema.ts';
 import {
@@ -88,7 +88,12 @@ export class PgTaskRepository extends TaskRepository {
     if (filters.projectId !== undefined && filters.projectId !== null) {
       conds.push(eq(tasks.projectId, filters.projectId));
     }
-    if (filters.parentId !== undefined && filters.parentId !== null) {
+    // null means "root tasks only" (parent_id IS NULL); undefined means no
+    // filter. Collapsing the two returned the whole tree under the name
+    // `root_tasks`.
+    if (filters.parentId === null) {
+      conds.push(isNull(tasks.parentId));
+    } else if (filters.parentId !== undefined) {
       conds.push(eq(tasks.parentId, filters.parentId));
     }
     if (filters.q) {
