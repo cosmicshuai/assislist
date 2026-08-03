@@ -49,8 +49,11 @@ export function requestLogger() {
  */
 // eslint-disable-next-line no-unused-vars -- Express identifies this by arity
 export function errorHandler(err, req, res, next) {
-  // Body-parser failures are client errors, not server faults.
-  if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+  // Body-parser failures are client errors, not server faults. Match on
+  // body-parser's own markers (it sets `type` and attaches the raw `body`) —
+  // a bare `instanceof SyntaxError` would also swallow genuine application
+  // bugs and report them to the client as bad input.
+  if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && 'body' in err)) {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
   if (err?.type === 'entity.too.large') {
