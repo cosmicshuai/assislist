@@ -1,9 +1,26 @@
-// api/client.ts — typed fetch wrapper for the Todo System API
-// The token is injected at build time via Vite env (see .env in client/).
-// For local dev the Vite proxy forwards /api to 127.0.0.1:3456.
+// api/client.ts — typed fetch wrapper for the AssisList API
+//
+// The bundle carries no credential. The browser authenticates once via
+// POST /auth/login and the server sets an httpOnly session cookie, which the
+// browser then attaches automatically. For local dev the Vite proxy forwards
+// /api to 127.0.0.1:3456, so the cookie stays same-origin there too.
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
-const TOKEN = import.meta.env.VITE_TODO_API_TOKEN || '';
+
+/** Thrown on 401 so the app can show the unlock screen instead of an error. */
+export class UnauthorizedError extends Error {
+  constructor(message = 'Unauthorized') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+// Lets the auth gate re-lock the UI when a session expires mid-use, without
+// every caller having to check for 401 itself.
+let unauthorizedHandler: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  unauthorizedHandler = fn;
+}
 
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 export type TaskStatus = 'active' | 'completed' | 'abandoned';
@@ -111,16 +128,25 @@ function toWireProject(data: ProjectInput): Record<string, unknown> {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
     ...(options.headers as Record<string, string>),
   };
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+    credentials: 'same-origin',
+  });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
       const body = await res.json();
       if (body.error) msg = body.error;
     } catch { /* ignore */ }
+    if (res.status === 401) {
+      // The unlock screen's own login attempt should surface as a form error,
+      // not re-trigger the gate it is already showing.
+      if (!path.startsWith('/auth/')) unauthorizedHandler?.();
+      throw new UnauthorizedError(msg);
+    }
     throw new Error(msg);
   }
   return res.json() as Promise<T>;
@@ -148,6 +174,18 @@ export interface Recommendations {
   source?: 'engine' | 'agent';
   refreshed?: string;
 }
+
+export interface SessionState {
+  authenticated: boolean;
+  expiresAt?: string;
+}
+
+export const auth = {
+  session: () => request<SessionState>('/auth/session'),
+  login: (token: string) =>
+    request<SessionState>('/auth/login', { method: 'POST', body: JSON.stringify({ token }) }),
+  logout: () => request<SessionState>('/auth/logout', { method: 'POST' }),
+};
 
 export const api = {
   listTasks: (filters: TaskFilters = {}) =>

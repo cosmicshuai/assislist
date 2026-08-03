@@ -2,6 +2,7 @@
 import path from 'node:path';
 import express from 'express';
 import { authMiddleware } from './middleware/auth.js';
+import authRouter from './routes/auth.js';
 import tasksRouter from './routes/tasks.js';
 import projectsRouter from './routes/projects.js';
 import dependenciesRouter from './routes/dependencies.js';
@@ -20,6 +21,9 @@ export function createApp() {
   // Root — serve the client (single-port deployment: API + UI on :3456)
   const distDir = path.resolve(import.meta.dirname, '../../client/dist');
   app.use(express.static(distDir));
+
+  // Unlock flow — unauthenticated by definition (it is how you authenticate)
+  app.use('/api/v1/auth', authRouter);
 
   // Authenticated API
   app.use('/api/v1/projects', authMiddleware, projectsRouter);

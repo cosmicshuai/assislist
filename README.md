@@ -61,9 +61,10 @@ npm start                # API on :3456
 
 # Client (dev)
 cd client
-cp .env.example .env     # set VITE_TODO_API_TOKEN = same as server token
+cp .env.example .env     # no secrets here — the client ships no credential
 npm install
 npm run dev              # Vite dev server with /api proxy
+# Open the app and paste TODO_API_TOKEN once to unlock it.
 ```
 
 For production, build the client and let Express serve it on the same port:
@@ -113,6 +114,9 @@ Auth: `Authorization: Bearer <token>` on all endpoints except `/api/v1/health`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | /api/v1/health | liveness |
+| GET | /api/v1/auth/session | is this browser unlocked? (no auth) |
+| POST | /api/v1/auth/login | exchange the user token for a session cookie (no auth) |
+| POST | /api/v1/auth/logout | clear the session cookie |
 | GET | /api/v1/projects | list (excludes archived by default; ?archived=true) |
 | GET | /api/v1/projects/:id | detail + root tasks + counts |
 | POST | /api/v1/projects | create project (user only; agent 403) |
@@ -137,9 +141,10 @@ Auth: `Authorization: Bearer <token>` on all endpoints except `/api/v1/health`.
 
 Two bearer tokens (see SECURITY.md for the full trust model):
 
-- `TODO_API_TOKEN` — user/UI scope: full access. This token is embedded in
-  the web bundle, so it is visible to anyone who can load the page. That is
-  acceptable for a single-user, own-network deployment.
+- `TODO_API_TOKEN` — user/UI scope: full access. It stays on the server. The
+  web bundle ships no credential: you enter the token once in the browser and
+  the server returns an `httpOnly` session cookie, so JavaScript on the page
+  can never read it. Rotating the token invalidates all sessions.
 - `TODO_AGENT_TOKEN` — agent scope: GET anything; POST /captures; add
   subtasks; edit/complete/abandon/delete only agent-created tasks
   (source=whatsapp). Everything else returns 403.
