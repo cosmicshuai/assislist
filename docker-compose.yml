@@ -1,0 +1,45 @@
+# AssisList — one-command self-hosted deployment
+#   cp .env.example .env   # set TODO_API_TOKEN (openssl rand -hex 32)
+#   docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-assislist}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assislist}
+      POSTGRES_DB: ${POSTGRES_DB:-assislist}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-assislist} -d ${POSTGRES_DB:-assislist}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  app:
+    build: .
+    image: ghcr.io/cosmicshuai/assislist:${ASSISLIST_VERSION:-latest}
+    ports:
+      - "${PORT:-3456}:3456"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-assislist}:${POSTGRES_PASSWORD:-assislist}@db:5432/${POSTGRES_DB:-assislist}
+      TODO_API_TOKEN: ${TODO_API_TOKEN:?set TODO_API_TOKEN in .env (openssl rand -hex 32)}
+      TODO_AGENT_TOKEN: ${TODO_AGENT_TOKEN:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      PORT: "3456"
+      HOST: "0.0.0.0"
+      AUTO_MIGRATE: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3456/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  pgdata:

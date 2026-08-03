@@ -7,59 +7,62 @@ Plan: specs/003-open-source-release/plan.md
 Legend: [P] = parallelizable. Each task ≤ 1 day. DoD = definition of done.
 
 ## Phase A — Rebrand + generic config
-- [ ] T-001 [P] [FR-004, NFR-002] server config.js: default HOST=0.0.0.0,
+- [x] T-001 [P] [FR-004, NFR-002] server config.js: default HOST=0.0.0.0,
   DATABASE_URL default becomes generic local TCP fallback (no
   `postgres://cosmic@/todo_system?host=/var/run/postgresql`); keep all env
   overrides.
   | DoD: config.js has no homelab strings; server still boots with explicit env.
   | Depends: none
-- [ ] T-002 [P] [FR-005, FR-008] server app.js: health payload
+- [x] T-002 [P] [FR-005, FR-008] server app.js: health payload
   `service: 'assislist'`; startup banner says AssisList.
   | DoD: /api/v1/health returns { ok: true, service: 'assislist', ... }.
   | Depends: none
-- [ ] T-003 [P] [FR-007] client rebrand: index.html title → AssisList; PWA
+- [x] T-003 [P] [FR-007] client rebrand: index.html title → AssisList; PWA
   manifest name/short_name/description → AssisList; vite.config.ts dev
   host/proxy → localhost (127.0.0.1:3456) — no LAN IP.
   | DoD: no `192.168.1.180` in client committed files; PWA shows AssisList.
   | Depends: none
-- [ ] T-004 [P] [FR-002] server/package.json: name → assislist-server, add
+- [x] T-004 [P] [FR-002] server/package.json: name → assislist-server, add
   `license: "MIT"`, add `migrate` script (drizzle migrator). Add engines
   field (node >=22).
   | DoD: package.json reflects name/license/migrate; `npm run migrate`
         applies pending migrations against DATABASE_URL.
   | Depends: none
-- [ ] T-005 [P] [FR-002, FR-008] client/package.json: name → assislist-client
+- [x] T-005 [P] [FR-002, FR-008] client/package.json: name → assislist-client
   (private), license MIT.
   | DoD: package.json consistent; build still passes.
   | Depends: none
 
 ## Phase B — Docker packaging
-- [ ] T-006 [FR-003, NFR-003] Dockerfile multi-stage: stage 1 node:25-alpine
+- [x] T-006 [FR-003, NFR-003] Dockerfile multi-stage: stage 1 node:25-alpine
   builds client (npm ci + npm run build); stage 2 node:25-alpine installs
   server deps, copies server + client/dist, EXPOSE 3456, CMD npm start.
   | DoD: `docker build` succeeds; image runs and serves API + UI.
   | Depends: T-003, T-004, T-005
-- [ ] T-007 [FR-003, FR-005, NFR-005] docker-compose.yml: services db
+- [x] T-007 [FR-003, FR-005, NFR-005] docker-compose.yml: services db
   (postgres:16-alpine, named volume pgdata, POSTGRES_USER/PASSWORD/DB env)
   + app (build ., ports 3456:3456, depends_on db healthy, healthchecks:
   pg_isready / curl /api/v1/health). .env at repo root drives credentials
   and tokens (with .env.example at root).
   | DoD: compose config validates; db + app come up healthy; UI reachable.
   | Depends: T-006
-- [ ] T-008 [FR-003] .dockerignore (node_modules, dist, .git, .env, data,
+- [x] T-008 [FR-003] .dockerignore (node_modules, dist, .git, .env, data,
   specs, docs, .github).
   | DoD: docker build context small; no secrets in image.
   | Depends: T-006
-- [ ] T-009 [FR-006, EC-003] migrate-on-boot: server startup runs drizzle
+- [x] T-009 [FR-006, EC-003] migrate-on-boot: server startup runs drizzle
   migrator (AUTO_MIGRATE=true default) with small retry for db readiness.
   | DoD: fresh compose up auto-creates schema; second boot is a no-op.
   | Depends: T-004, T-007
-- [ ] T-010 [AC-001, AC-003, NFR-004] Local verification: `docker compose
+- [x] T-010 [AC-001, AC-003, NFR-004] Local verification: `docker compose
   up -d` on this host (user runs docker), health + UI + one capture via
   curl with token.
   | DoD: compose-up instance passes AC-001 smoke; screenshot/curl evidence
         recorded in task comment.
   | Depends: T-007, T-009
+  | Verified 2026-08-02: build OK, db+app healthy, /api/v1/health ok,
+  | UI 200, capture created project 1 + task 1 on :3457. Stack left running
+  | per user; teardown: TODO_API_TOKEN=testtoken123 PORT=3457 docker compose down -v
 
 ## Phase C — CI + releases
 - [ ] T-011 [FR-009, AC-004] .github/workflows/ci.yml: on push/PR — job

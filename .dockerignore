@@ -1,0 +1,17 @@
+# AssisList — Docker build context exclusions
+.git
+.github
+node_modules
+**/node_modules
+dist
+**/dist
+data
+specs
+docs
+.scratch
+.specify
+.env
+**/.env
+*.log
+README.md
+AGENTS.md
