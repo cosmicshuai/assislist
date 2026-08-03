@@ -25,15 +25,22 @@ Requirements: Docker with Compose v2.
 git clone https://github.com/cosmicshuai/assislist.git
 cd assislist
 cp .env.example .env
-# 1. Generate a strong API token:
-openssl rand -hex 32
-# 2. Put it in .env as TODO_API_TOKEN (required). Optionally set
-#    TODO_AGENT_TOKEN for agent-scoped writes, and a strong POSTGRES_PASSWORD.
+
+# Generate the two required secrets and write them into .env:
+echo "TODO_API_TOKEN=$(openssl rand -hex 32)" >> .env
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env
+# (delete the placeholder lines .env.example ships with)
+# Optionally set TODO_AGENT_TOKEN for agent-scoped writes.
+
 docker compose up -d
 ```
 
-Open <http://localhost:3456>. Health check:
-<http://localhost:3456/api/v1/health>.
+Open <http://localhost:3456> and paste your `TODO_API_TOKEN` once to unlock
+the UI — the server exchanges it for an `httpOnly` session cookie, so the
+token is never stored in the page.
+
+Liveness: <http://localhost:3456/api/v1/health>.
+Readiness (includes the database): <http://localhost:3456/api/v1/ready>.
 
 The app auto-runs database migrations on first boot. Your data lives in the
 `pgdata` Docker volume — it survives `docker compose down` and is removed

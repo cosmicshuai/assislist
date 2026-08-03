@@ -5,16 +5,25 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   server-test:
-    name: Server tests
+    name: Server tests (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the supported floor (package.json engines); 24 catches
+        # forward-compatibility breaks before users hit them.
+        node: ['22', '24']
     services:
       postgres:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: assislist
-          POSTGRES_PASSWORD: assislist
+          POSTGRES_PASSWORD: ci-only-throwaway-password
           POSTGRES_DB: assislist_test
         ports:
           - 5432:5432
@@ -24,14 +33,14 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     env:
-      DATABASE_URL: postgres://assislist:assislist@localhost:5432/assislist_test
+      DATABASE_URL: postgres://assislist:ci-only-throwaway-password@localhost:5432/assislist_test
       TODO_API_TOKEN: ci-test-user-token-0123456789abcdef
       TODO_AGENT_TOKEN: ci-test-agent-token-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: server/package-lock.json
       - name: Install
@@ -51,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: '22'
           cache: npm
           cache-dependency-path: client/package-lock.json
       - name: Install

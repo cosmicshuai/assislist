@@ -1,12 +1,16 @@
 # AssisList — one-command self-hosted deployment
-#   cp .env.example .env   # set TODO_API_TOKEN (openssl rand -hex 32)
+#   cp .env.example .env
+#   # generate both secrets:  openssl rand -hex 32
 #   docker compose up -d
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-assislist}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assislist}
+      # Required, like the API token. A default password here would be the
+      # path of least resistance, and it ends up in `docker compose config`,
+      # the container environment, and process listings.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (openssl rand -hex 32)}
       POSTGRES_DB: ${POSTGRES_DB:-assislist}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -23,13 +27,22 @@ services:
     ports:
       - "${PORT:-3456}:3456"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-assislist}:${POSTGRES_PASSWORD:-assislist}@db:5432/${POSTGRES_DB:-assislist}
+      # Discrete connection parameters rather than a composed DATABASE_URL, so
+      # a password containing @ : / ? # works instead of producing a malformed
+      # URL — which is exactly the failure that pushes people to weak passwords.
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-assislist}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (openssl rand -hex 32)}
+      PGDATABASE: ${POSTGRES_DB:-assislist}
       TODO_API_TOKEN: ${TODO_API_TOKEN:?set TODO_API_TOKEN in .env (openssl rand -hex 32)}
       TODO_AGENT_TOKEN: ${TODO_AGENT_TOKEN:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       PORT: "3456"
       HOST: "0.0.0.0"
       AUTO_MIGRATE: "true"
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       db:
         condition: service_healthy
