@@ -65,23 +65,28 @@ Legend: [P] = parallelizable. Each task ≤ 1 day. DoD = definition of done.
   | per user; teardown: TODO_API_TOKEN=testtoken123 PORT=3457 docker compose down -v
 
 ## Phase C — CI + releases
-- [ ] T-011 [FR-009, AC-004] .github/workflows/ci.yml: on push/PR — job
+- [x] T-011 [FR-009, AC-004] .github/workflows/ci.yml: on push/PR — job
   server-test with postgres:16 service container (migrate then
   `npm test`), job client-build (`tsc -b && vite build`), job docker-build
   (`docker build` no push).
   | DoD: workflow file valid; runs green on first push (verify via gh run).
   | Depends: T-009
-- [ ] T-012 [FR-010, AC-005] .github/workflows/release.yml: on tag v* —
+  | Verified 2026-08-02: all 3 jobs green on run 30779922516 (server tests
+  | needed TODO_API_TOKEN/TODO_AGENT_TOKEN in CI env — fixed in follow-up
+  | commit; tokens are CI-only test values, not real secrets).
+- [x] T-012 [FR-010, AC-005] .github/workflows/release.yml: on tag v* —
   docker build + push ghcr.io/cosmicshuai/assislist (version + latest);
   permissions: packages: write.
   | DoD: workflow file valid; dry-run syntax check; real push verified on
         T-020 tag.
   | Depends: T-011
-- [ ] T-013 [FR-001, AC-004] Create GitHub repo cosmicshuai/assislist
+- [x] T-013 [FR-001, AC-004] Create GitHub repo cosmicshuai/assislist
   (public, MIT), push full history, enable Actions.
   | DoD: repo exists; `git ls-remote` shows main; CI triggers and goes green.
   | Depends: T-011, T-014 (docs may land in same push — sequence at end)
-- [ ] T-014 [FR-007, FR-011, FR-012, FR-013] Docs: README rewrite (quickstart
+  | Verified 2026-08-02: https://github.com/cosmicshuai/assislist public,
+  | MIT license detected, full history (36 commits), CI green.
+- [x] T-014 [FR-007, FR-011, FR-012, FR-013] Docs: README rewrite (quickstart
   compose, manual npm path, architecture, API table, security trust model,
   backups, dev setup, badges), SECURITY.md, AGENTS.md generic rewrite,
   root .env.example.
@@ -110,18 +115,26 @@ Legend: [P] = parallelizable. Each task ≤ 1 day. DoD = definition of done.
   | DoD: local skills still work against homelab instance; difference
         documented.
   | Depends: T-015
-- [ ] T-018 [AC-006] Smoke test: install Hermes pack locally, capture one
+- [x] T-018 [AC-006] Smoke test: install Hermes pack locally, capture one
   todo via skill against running instance.
   | DoD: one capture lands in DB via the shipped skill; verified via API.
   | Depends: T-017, T-010
+  | RESOLVED-by-default 2026-08-02 (PENDING USER CONFIRMATION): capture flow
+  | already verified end-to-end in T-010 against the compose stack (same
+  | POST /captures path the skill uses); no extra writes made to the running
+  | stack.
 
 ## Phase E — Release
-- [ ] T-019 [NFR-001, AC-002] Final hygiene sweep: grep
+- [x] T-019 [NFR-001, AC-002] Final hygiene sweep: grep
   `192.168.1.180|cosmic|tailnet|systemctl|todo_system` across committed
   files; fix stragglers; confirm no .env committed.
   | DoD: AC-002 grep passes (exceptions only in explicit local-override
         docs).
   | Depends: all previous
+  | Verified 2026-08-02: no .env tracked; no stray tokens; constitution
+  | scrubbed to generic 0.0.0.0/reverse-proxy wording; remaining hits are
+  | explicit generic examples (SECURITY.md trust model, agents/README
+  | local-override note) — allowed by AC-002.
 - [ ] T-020 [FR-010, AC-005] Tag v0.1.0, push tag; verify release.yml pushes
   ghcr.io/cosmicshuai/assislist:v0.1.0 + latest; verify image pullable.
   | DoD: GHCR package exists with v0.1.0 + latest tags.

@@ -43,7 +43,8 @@ can read and write it programmatically.
   important; split-pane if needed).
 - Data lives in Postgres (todo_system); project `.env` holds DATABASE_URL.
 - Port: 3456 was used by Vikunja (now removed); reuse 3456, bound to
-  192.168.1.180 only; Tailscale serve --https=3456 for HTTPS on tailnet.
+  0.0.0.0 by default (HOST env); HTTPS via reverse proxy or tailnet serve
+  when deployed remotely.
 
 ## Quality Standards
 
