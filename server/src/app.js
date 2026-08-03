@@ -1,28 +1,45 @@
 // app.js — Express app factory (no listen; tests use this on ephemeral ports)
 import path from 'node:path';
 import express from 'express';
+import { config } from './config.js';
 import { authMiddleware } from './middleware/auth.js';
+import { errorHandler, requestLogger } from './middleware/logging.js';
+import { apiLimiter, loginLimiter, securityHeaders } from './middleware/security.js';
 import authRouter from './routes/auth.js';
+import healthRouter from './routes/health.js';
 import tasksRouter from './routes/tasks.js';
 import projectsRouter from './routes/projects.js';
 import dependenciesRouter from './routes/dependencies.js';
 import capturesRouter from './routes/captures.js';
 import recommendationsRouter from './routes/recommendations.js';
 
+const BODY_LIMIT = '256kb';
+
 export function createApp() {
   const app = express();
-  app.use(express.json());
 
-  // Liveness — unauthenticated
-  app.get('/api/v1/health', (req, res) => {
-    res.json({ ok: true, service: 'assislist', time: new Date().toISOString() });
-  });
+  // Only trust forwarded headers when the operator says how many proxies sit in
+  // front — otherwise any client could spoof its IP past the rate limiter.
+  app.set('trust proxy', config.trustProxy);
+  app.disable('x-powered-by');
+
+  app.use(securityHeaders());
+  app.use(requestLogger());
+  app.use(express.json({ limit: BODY_LIMIT }));
+
+  // Liveness + readiness — unauthenticated, and outside the rate limiter so a
+  // burst of traffic can never make the container look unhealthy.
+  app.use('/api/v1', healthRouter);
+
+  app.use('/api', apiLimiter());
 
   // Root — serve the client (single-port deployment: API + UI on :3456)
   const distDir = path.resolve(import.meta.dirname, '../../client/dist');
   app.use(express.static(distDir));
 
-  // Unlock flow — unauthenticated by definition (it is how you authenticate)
+  // Unlock flow — unauthenticated by definition (it is how you authenticate).
+  // The strict limiter guards the one endpoint where the token can be guessed.
+  app.use('/api/v1/auth/login', loginLimiter());
   app.use('/api/v1/auth', authRouter);
 
   // Authenticated API
@@ -42,6 +59,8 @@ export function createApp() {
     }
     next();
   });
+
+  app.use(errorHandler);
 
   return app;
 }

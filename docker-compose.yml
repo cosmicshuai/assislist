@@ -34,7 +34,9 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3456/api/v1/health"]
+      # /ready, not /health: readiness checks the database, so a broken or
+      # unmigrated instance is reported unhealthy instead of quietly 500ing.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3456/api/v1/ready"]
       interval: 10s
       timeout: 5s
       retries: 12

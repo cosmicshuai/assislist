@@ -26,6 +26,12 @@ export const config = {
   trustProxy: Number(process.env.TRUST_PROXY) || 0,
   logLevel: process.env.LOG_LEVEL || 'info',
   isProduction: process.env.NODE_ENV === 'production',
+  // Send HSTS. Off by default: the reverse proxy that terminates TLS should
+  // own this, and sending it from a plain-HTTP LAN deployment would pin
+  // browsers to an https:// URL that serves nothing.
+  enableHsts: process.env.ENABLE_HSTS === 'true',
+  rateLimitPerMinute: num(process.env.RATE_LIMIT_PER_MINUTE, 300),
+  loginAttemptsPerWindow: num(process.env.LOGIN_ATTEMPTS_PER_15MIN, 10),
 };
 
 /**
