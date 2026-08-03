@@ -68,18 +68,36 @@ test('validateConfig accepts a well-formed configuration', () => {
   assert.deepEqual(validateConfig({ warn: () => {} }), []);
 });
 
+// `config` is a shared mutable singleton, and the session signing key is
+// derived from config.apiToken. Restoring in `finally` keeps a failed
+// assertion here from cascading into every later test in the file.
+function withConfig(patch, fn) {
+  const saved = { ...config };
+  Object.assign(config, patch);
+  try {
+    fn();
+  } finally {
+    Object.assign(config, saved);
+  }
+}
+
 test('validateConfig rejects a missing or weak user token', () => {
-  const original = config.apiToken;
-  config.apiToken = '';
-  assert.match(validateConfig({ warn: () => {} })[0], /TODO_API_TOKEN is not set/);
-  config.apiToken = 'short';
-  assert.match(validateConfig({ warn: () => {} })[0], /too short/);
-  config.apiToken = original;
+  withConfig({ apiToken: '' }, () => {
+    assert.match(validateConfig({ warn: () => {} })[0], /TODO_API_TOKEN is not set/);
+  });
+  withConfig({ apiToken: 'short' }, () => {
+    assert.match(validateConfig({ warn: () => {} })[0], /too short/);
+  });
 });
 
 test('validateConfig rejects an agent token equal to the user token', () => {
-  const original = config.agentToken;
-  config.agentToken = config.apiToken;
-  assert.match(validateConfig({ warn: () => {} })[0], /must differ/);
-  config.agentToken = original;
+  withConfig({ agentToken: config.apiToken }, () => {
+    assert.match(validateConfig({ warn: () => {} })[0], /must differ/);
+  });
+});
+
+test('config is restored after the mutating tests above', () => {
+  assert.equal(config.apiToken, USER_TOKEN);
+  assert.equal(config.agentToken, AGENT_TOKEN);
+  assert.equal(actorForToken(USER_TOKEN), 'user');
 });

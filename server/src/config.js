@@ -59,7 +59,12 @@ export function validateConfig({ warn = console.warn } = {}) {
     warn('ℹ️  TODO_AGENT_TOKEN is unset — running in single-token mode; agents get full user access.');
   }
 
-  if (!config.databaseUrl) errors.push('DATABASE_URL is not set');
+  // Neither form of database configuration was given, so we are about to use
+  // the built-in localhost default. That is right for a dev box and wrong
+  // everywhere else — say so rather than failing later with a refused socket.
+  if (!process.env.DATABASE_URL && !(process.env.PGHOST && process.env.PGDATABASE)) {
+    warn(`ℹ️  No DATABASE_URL or PGHOST/PGDATABASE set — falling back to ${config.databaseUrl}`);
+  }
 
   return errors;
 }
