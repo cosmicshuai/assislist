@@ -41,7 +41,7 @@ export default function App() {
         <Toolbar sx={{ gap: 1 }}>
           <CheckCircleOutlineIcon color="primary" />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Todo System
+            AssisList
           </Typography>
           {projectId === null && (
             <ToggleButtonGroup

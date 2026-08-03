@@ -8,7 +8,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:theme": "node scripts/generate-theme.mjs",
+    "generate:icons": "node scripts/generate-icons.mjs",
+    "generate:assets": "npm run generate:theme && npm run generate:icons"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

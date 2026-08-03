@@ -12,16 +12,21 @@ export default defineConfig({
         name: 'AssisList',
         short_name: 'AssisList',
         description: 'Self-hosted productivity — capture from WhatsApp/AI, manage here',
-        theme_color: '#0b1220',
-        background_color: '#0b1220',
+        // Same surface tone as index.html's light theme-color; the manifest
+        // has no per-mode variant, so the light value is the one to use.
+        theme_color: '#f9f9ff',
+        background_color: '#f9f9ff',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
-          {
-            src: '/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          // Android crops to its own shape; without a maskable icon it shrinks
+          // the artwork into a white blob instead.
+          { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
     }),
