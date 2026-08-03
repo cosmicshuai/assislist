@@ -18,7 +18,11 @@ PG16). Use for ALL todo/planning work through the AssisList API.
 
 ## Auth
 - Header: `Authorization: Bearer <token>` on all endpoints except
-  `/api/v1/health`.
+  `/api/v1/health`, `/api/v1/ready`, and `/api/v1/auth/*`.
+- Agents always use the bearer header. The `/api/v1/auth/*` endpoints exist
+  only for the browser UI (which exchanges the user token for a session
+  cookie so it need not embed a credential). The agent token is rejected by
+  `/auth/login` by design — agent scope cannot be escalated to a UI session.
 - Two tokens since spec 002:
   - `ASSISLIST_API_TOKEN` — user/UI scope: full access to everything.
   - `ASSISLIST_AGENT_TOKEN` — agent scope: GET anything; POST /captures;
@@ -48,10 +52,14 @@ PG16). Use for ALL todo/planning work through the AssisList API.
   - breakdown items: `depends_on` are sibling INDICES and must be < own index.
   - use the AGENT token for captures (agent scope).
 - `GET /api/v1/tasks?status=active` — list. Filters include `status`,
-  `project_id`, `parent_id` (null = root tasks), `priority`, `urgency`,
+  `project_id`, `parent_id` (pass the literal `null` for root tasks only),
+  `priority`, `urgency`,
   `due`, `q`, `sort`. Multi-word `q=` search is unreliable — list and filter
   client-side when needed.
 - `GET /api/v1/tasks/:id` — tree: `children`, `blocked_by`, `blocks`.
+- Malformed ids and numeric filters return `400`, not `500`. A `4xx` means the
+  request is wrong and must not be retried unchanged; only `5xx` is worth a
+  retry.
 - `PUT /api/v1/tasks/:id` — `{title, context, priority, due_date, parent_id,
   status}`. Urgency recomputed from priority + due_date. Agent: only
   source=whatsapp rows.
