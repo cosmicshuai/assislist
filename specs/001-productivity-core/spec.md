@@ -48,14 +48,14 @@ rejected Vikunja (UI) with an app built to fit.
 - [x] FR-008 (SHOULD): Filtering/sorting — by status, priority, due date,
   dependency order (topological).
 - [x] FR-009 (MUST): Repository pattern — TaskRepository abstraction
-  (PgTaskRepository on dev-infra Postgres 16, DB `todo_system`).
+  (PgTaskRepository on local Postgres 16, DB `assislist`).
 
 ## 4. Non-Functional Requirements
 - [x] NFR-001 (MUST): Runs on the homelab (Node 25, Express, Postgres 16),
   port 3456, LAN-bound + Tailscale HTTPS.
 - [x] NFR-002 (MUST): Single-user, local-first. No auth in v1 beyond LAN +
   Tailscale boundary (revisit if exposed publicly).
-- [x] NFR-003 (MUST): Data durability — Postgres DB on ssd1 (dev-infra);
+- [x] NFR-003 (MUST): Data durability — Postgres DB on ssd1 (local);
   backup via existing nightly backup flow (ssd2 backups include postgresql).
 - [x] NFR-004 (MUST): API stable IDs + JSON; agent-friendly.
 - [x] NFR-005 (SHOULD): UI fast and clean; mobile-usable.
@@ -91,9 +91,9 @@ rejected Vikunja (UI) with an app built to fit.
 
 ## 9. Open Questions
 - [x] Q1 RESOLVED 2026-08-01 (AMENDED 2026-08-01): PostgreSQL as source of
-  truth using existing dev-infra Postgres 16 (DB `todo_system`), drizzle-orm
+  truth using existing local Postgres 16 (DB `assislist`), drizzle-orm
   beta + repository pattern. User decision: "drizzle-orm beta + postgres,
-  remember our dev-infra setup". Supersedes earlier files-as-truth/SQLite
+  remember our local setup". Supersedes earlier files-as-truth/SQLite
   default.
 - [x] Q2 RESOLVED 2026-08-01: React + Vite frontend (matches constitution and
   user's documented preference for markdown-critical UX).

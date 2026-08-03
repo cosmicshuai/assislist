@@ -2,7 +2,7 @@
 
 ## Phase: Schema & data reset
 - [x] T-001 [P] [FR-001] [FR-002] [NFR-001] Drizzle schema: projects table (id, title, context, status incl archived, priority, urgency, due_date, source, completed_at, timestamps) + project_status enum; tasks gains project_id NOT NULL FK -> projects.id ON DELETE CASCADE | DoD: `drizzle-kit generate` produces migration; schema reflects plan §3 | Depends: none
-- [x] T-002 [FR-002] [NFR-001] Apply fresh schema to todo_system (drop old tables, apply new migration) | DoD: `psql \dt` shows projects + tasks with FK constraints; data empty (Q2) | Depends: T-001
+- [x] T-002 [FR-002] [NFR-001] Apply fresh schema to assislist (drop old tables, apply new migration) | DoD: `psql \dt` shows projects + tasks with FK constraints; data empty (Q2) | Depends: T-001
 - [x] T-003 [FR-002] [FR-003] Verify constraints: tasks.project_id NOT NULL, cascade delete from projects, parent_id self-FK intact | DoD: SQL-level checks pass; quick insert/delete smoke in psql | Depends: T-002
 
 ## Phase: Config & auth

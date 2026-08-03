@@ -190,7 +190,7 @@ to v2").
   protected — the rule is by source, not by depth).
 
 ## 8. Dependencies & Assumptions
-- Existing dev-infra Postgres 16, DB todo_system; migrations via drizzle-kit
+- Existing local Postgres 16, DB assislist; migrations via drizzle-kit
   (projects table + tasks.project_id + enum extension). Existing data will be
   dropped per Q2 decision.
 - Existing API token TODO_API_TOKEN stays the user/UI token.

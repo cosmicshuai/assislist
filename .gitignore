@@ -3,3 +3,7 @@ data/
 dist/
 .env
 *.log
+
+# Internal planning docs (wayfinder tracker, agent drafts) — not for public repo
+.scratch/
+docs/

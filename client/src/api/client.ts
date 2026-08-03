@@ -1,6 +1,6 @@
 // api/client.ts — typed fetch wrapper for the Todo System API
 // The token is injected at build time via Vite env (see .env in client/).
-// For local dev the Vite proxy forwards /api to 192.168.1.180:3456.
+// For local dev the Vite proxy forwards /api to 127.0.0.1:3456.
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
 const TOKEN = import.meta.env.VITE_TODO_API_TOKEN || '';

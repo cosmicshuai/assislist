@@ -18,7 +18,7 @@ Agent (agent token TODO_AGENT_TOKEN)┘        │
                                              ├─ routes: /projects, /tasks, /captures, /recommendations
                                              ├─ services: captureService (project_id-aware)
                                              └─ repositories: PgProjectRepository + PgTaskRepository
-                                                    └─ PostgreSQL 16 (todo_system)
+                                                    └─ PostgreSQL 16 (assislist)
 ```
 Actor detection: middleware reads Bearer token; matches TODO_AGENT_TOKEN →
 `req.actor = 'agent'`, else TODO_API_TOKEN → `req.actor = 'user'`. When
@@ -128,7 +128,7 @@ AGENTS.md updated.
 - AC traceability: AC-001..AC-009 mapped to tests in tasks.md.
 
 ## 8. Risks & Mitigations
-- **Data loss**: intentional (Q2) — but confirm DB is the todo_system dev DB,
+- **Data loss**: intentional (Q2) — but confirm DB is the assislist dev DB,
   not backups; nightly pg_dump continues to protect.
 - **Agent token misconfig**: if skill uses agent token but server lacks it →
   fallback treats as user (silent over-permission). Mitigation: when

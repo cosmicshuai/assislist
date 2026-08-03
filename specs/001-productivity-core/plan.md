@@ -20,7 +20,7 @@ WhatsApp (Hermes) ──text/voice──▶ Hermes agent (transcribe + research 
                                       ▼
                       PgTaskRepository (drizzle-orm beta + node-postgres)
                                       ▼
-                     PostgreSQL 16 (dev-infra, DB todo_system)
+                     PostgreSQL 16 (local, DB assislist)
                                       ▲
                               React 19 + Vite + Tailwind v4 + shadcn/ui
                               (PWA installable, mobile-first)
@@ -85,7 +85,7 @@ ticket 04; service resolves indices → task ids after insert.
 todo-system/
   server/
     src/
-      index.js            # express app, listen 192.168.1.180:3456
+      index.js            # express app, listen 127.0.0.1:3456
       config.js           # reads .env (DATABASE_URL, TODO_API_TOKEN, PORT)
       db/
         client.js         # pg Pool + drizzle({client})
@@ -119,7 +119,7 @@ todo-system/
 1. Setup — scaffold server (npm init ESM), client (Vite react-ts), deps:
    express, pg, drizzle-orm@beta, drizzle-kit; tailwind v4, shadcn, vite-plugin-pwa.
 2. Data layer — drizzle schema, first migration (drizzle-kit generate + apply
-   against todo_system), PgTaskRepository with tests.
+   against assislist), PgTaskRepository with tests.
 3. API core — health, auth middleware, tasks CRUD, complete-with-deps,
    dependencies routes; unit tests; curl smoke tests.
 4. Capture service — validation, dedupe (similar-title hint), transactional
@@ -133,7 +133,7 @@ todo-system/
 ## 7. Testing Strategy
 - Unit: repository (CRUD, deps, cycle rejection), captureService (validation,
   dedupe, tree creation), urgencyService.
-- Integration: supertest against the app with a test DB (todo_system_test).
+- Integration: supertest against the app with a test DB (assislist_test).
 - E2E (AC-001..004): scripted curl/WhatsApp capture → assert tasks in DB + UI.
 - Traceability: every task lists FR/AC it satisfies.
 
@@ -147,7 +147,7 @@ todo-system/
 - Beta tailwind/shadcn churn → pin versions in package.json.
 
 ## 9. Decisions & Alternatives Considered
-- Postgres (dev-infra) over SQLite: user decision, avoids migration later,
+- Postgres (local) over SQLite: user decision, avoids migration later,
   matches existing stack; SQLite alternative recorded in constitution history.
 - drizzle-orm beta over stable: user decision ("beta is fine"); stable fallback
   documented in research ticket 01.

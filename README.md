@@ -1,33 +1,96 @@
-# Todo System
+# AssisList
 
-Personal productivity system: capture tasks from WhatsApp (text/voice), AI
-breaks them into context-rich subtasks with urgency and dependencies, managed
-in a self-hosted web app with a clean mobile-first UI. Since spec 002 the
-model is project-first: `project -> parent task -> child task -> ...`, with
-every task carrying the same project_id.
+Self-hosted productivity system: capture tasks from WhatsApp (text/voice) or
+your AI agent, let the agent break them into context-rich subtasks with
+urgency and dependencies, and manage everything in a clean mobile-first web
+app.
+
+- **Project-first model**: `project → parent task → child task → …` — every
+  task carries the same `project_id`; arbitrary nesting depth.
+- **Agent-friendly API**: stable IDs, machine-readable status/urgency,
+  dependency edges, and a dedicated agent token scope so AI agents can add
+  work without touching your manual tasks.
+- **One-command install**: Docker Compose brings up the API, web UI, and
+  PostgreSQL together.
+
+## Quickstart (Docker Compose — recommended)
+
+Requirements: Docker with Compose v2.
+
+```bash
+git clone https://github.com/cosmicshuai/assislist.git
+cd assislist
+cp .env.example .env
+# 1. Generate a strong API token:
+openssl rand -hex 32
+# 2. Put it in .env as TODO_API_TOKEN (required). Optionally set
+#    TODO_AGENT_TOKEN for agent-scoped writes, and a strong POSTGRES_PASSWORD.
+docker compose up -d
+```
+
+Open <http://localhost:3456>. Health check:
+<http://localhost:3456/api/v1/health>.
+
+The app auto-runs database migrations on first boot. Your data lives in the
+`pgdata` Docker volume — it survives `docker compose down` and is removed
+only with `docker compose down -v`.
+
+### Upgrading
+
+```bash
+docker compose pull      # fetch the newest image
+docker compose up -d
+# Back up your data first (see Backups).
+```
+
+## Manual install (advanced)
+
+Requires Node.js 22+ and PostgreSQL 16.
+
+```bash
+# Server
+cd server
+cp .env.example .env     # set DATABASE_URL, TODO_API_TOKEN (openssl rand -hex 32)
+npm install
+npm run migrate
+npm start                # API on :3456
+
+# Client (dev)
+cd client
+cp .env.example .env     # set VITE_TODO_API_TOKEN = same as server token
+npm install
+npm run dev              # Vite dev server with /api proxy
+```
+
+For production, build the client and let Express serve it on the same port:
+
+```bash
+cd client && npm run build
+# server serves client/dist on :3456 automatically
+```
 
 ## Architecture
 
 ```
-WhatsApp (Hermes) ──text/voice──▶ Hermes agent (transcribe + research + breakdown)
-                                      │  POST /api/v1/captures  (Bearer TODO_AGENT_TOKEN)
-                                      ▼
-                              Express 5 (ESM) server :3456
-                                      │  authMiddleware → actor: user | agent
-                                      ▼
-                 PgProjectRepository + PgTaskRepository (drizzle-orm beta + pg)
-                                      ▼
-                     PostgreSQL 16 (dev-infra, DB todo_system)
-                                      ▲
-                      React 19 + Vite + MUI v7 + PWA (client/)
+WhatsApp / AI agent ──▶ capture skill (transcribe + research + breakdown)
+                              │  POST /api/v1/captures  (Bearer TODO_AGENT_TOKEN)
+                              ▼
+                      Express 5 (ESM) server :3456
+                              │  authMiddleware → actor: user | agent
+                              ▼
+              PgProjectRepository + PgTaskRepository (drizzle-orm + pg)
+                              ▼
+                          PostgreSQL 16
+                              ▲
+                  React + Vite + MUI + PWA (client/)
 ```
 
 ## Stack
 
-- **Server**: Node 25, Express 5 (ESM), drizzle-orm beta + node-postgres
-- **DB**: dev-infra PostgreSQL 16, database `todo_system` (peer auth as cosmic)
-- **Client**: React 19 + Vite + MUI v7 (Material 3) + vite-plugin-pwa
-- **SDD**: spec-driven development (see .specify/, specs/)
+- **Server**: Node 22+, Express 5 (ESM), drizzle-orm + node-postgres
+- **DB**: PostgreSQL 16
+- **Client**: React + Vite + MUI (Material 3) + PWA
+- **Development**: spec-driven development (see `specs/`)
 
 ## Model
 
@@ -39,71 +102,9 @@ WhatsApp (Hermes) ──text/voice──▶ Hermes agent (transcribe + research 
 - Archive lives on the project: archived projects are hidden from the active
   board and excluded from recommendations; their tasks are preserved.
 
-## Running
-
-### Server (port 3456)
-
-```bash
-cd server
-cp .env.example .env   # then set TODO_API_TOKEN (openssl rand -hex 32)
-                       # optional TODO_AGENT_TOKEN for agent-scoped writes
-npm install
-npm run dev            # or: npm start
-```
-
-### Database migration
-
-```bash
-cd server
-npx drizzle-kit generate   # after schema changes
-psql -U cosmic -d todo_system -f drizzle/<migration>/migration.sql
-```
-
-### Client (dev: 5173, prod build: 4173)
-
-```bash
-cd client
-cp .env.example .env   # set VITE_TODO_API_TOKEN = same token as server
-npm install
-npm run dev            # Vite dev with /api proxy
-npm run build && npm run preview -- --host 192.168.1.180 --port 4173
-```
-
-### Production serving (single port :3456 — API + client)
-
-The systemd user service serves both the API and the built client on
-`192.168.1.180:3456`. Tailscale serve provides HTTPS:
-
-```bash
-tailscale serve --bg --https=3456 http://192.168.1.180:3456
-```
-
-Access: `https://cosmic-me-mini.tail657cd9.ts.net:3456` (API + web app).
-LAN: `http://192.168.1.180:3456`.
-
-### Service management
-
-```bash
-systemctl --user status todo-system.service   # check
-systemctl --user restart todo-system.service  # restart
-journalctl --user -u todo-system.service -f   # logs
-```
-
-Enabled with linger, so it starts at boot. The client is built to
-`client/dist` and served by the Express server; after client changes, rebuild
-with `cd client && npm run build` then restart the service.
-
-## WhatsApp capture
-
-Send a todo to the Hermes WhatsApp bot (text or voice note). The
-`capture-to-todos` skill (Hermes) transcribes, researches, breaks the todo
-into subtasks with context/priority/urgency/dependencies, POSTs to the API,
-and replies with a confirmation. Dedupe hints are surfaced as "similar to
-existing…".
-
 ## API (v1)
 
-Auth: `Authorization: Bearer <TODO_API_TOKEN>` (all except /health).
+Auth: `Authorization: Bearer <token>` on all endpoints except `/api/v1/health`.
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -125,35 +126,59 @@ Auth: `Authorization: Bearer <TODO_API_TOKEN>` (all except /health).
 | DELETE | /api/v1/tasks/:id | delete (cascades children + deps; agent: own tasks only) |
 | POST | /api/v1/tasks/:id/dependencies | add dependency (cycle-rejected) |
 | DELETE | /api/v1/tasks/:id/dependencies/:depId | remove dependency |
-| GET | /api/v1/recommendations?ai=1 | agent suggestions (top_next tasks + long_term projects); `ai=1` enriches reasons via DeepSeek if DEEPSEEK_API_KEY is set |
+| GET | /api/v1/recommendations?ai=1 | agent suggestions (top_next tasks + long_term projects) |
 | POST | /api/v1/recommendations | agent writes picks: top_next [{task_id, reason}], long_term [{project_id, reason}] |
 
-## Agent permissions
+## Security model
 
-Two bearer tokens:
-- `TODO_API_TOKEN` — user/UI scope: full access.
+Two bearer tokens (see SECURITY.md for the full trust model):
+
+- `TODO_API_TOKEN` — user/UI scope: full access. This token is embedded in
+  the web bundle, so it is visible to anyone who can load the page. That is
+  acceptable for a single-user, own-network deployment.
 - `TODO_AGENT_TOKEN` — agent scope: GET anything; POST /captures; add
-  subtasks (POST /tasks with parent_id); edit/complete/abandon/delete only
-  source=whatsapp tasks. Everything else (modifying source=manual tasks,
-  creating projects, root tasks, archive/restore) returns 403.
-- If TODO_AGENT_TOKEN is unset, the server runs single-token mode and all
-  valid requests are user-scoped (backward compatible).
+  subtasks; edit/complete/abandon/delete only agent-created tasks
+  (source=whatsapp). Everything else returns 403.
+- If `TODO_AGENT_TOKEN` is unset, the server runs single-token mode and all
+  valid requests are user-scoped.
+
+## AI agent skills
+
+AssisList ships installable skill packs for AI agents:
+
+| Framework | Install |
+|---|---|
+| Hermes | `cp -r agents/capture-to-todos ~/.hermes/skills/` (see agents/README.md) |
+| Claude Code | `cp -r agents/capture-to-todos ~/.claude/skills/` |
+| Codex | see agents/codex/README.md |
+| OpenClaw | see agents/openclaw/README.md |
+
+Skills: `capture-to-todos` (turn a message/voice note into an ordered task
+tree), `todo-api-reference` (endpoint + permission reference), and
+`stale-task-triage` (find idle projects/tasks). They read the server location
+and tokens from environment variables (`ASSISLIST_URL`, `ASSISLIST_API_TOKEN`,
+`ASSISLIST_AGENT_TOKEN`) so you can point them at any instance.
 
 ## Backups
 
-`~/homelab/backup-nas.sh` (nightly 03:30) rsyncs NAS data to ssd2 and
-pg_dumps all dev-infra databases (incl. todo_system) to
-`/mnt/ssd2/backups/postgresql/` (14-day retention).
-
-## Tests
-
 ```bash
-cd server && npm test   # node:test integration tests against dev DB
+docker compose exec db pg_dump -U assislist assislist > assislist-$(date +%F).sql
+# restore:
+docker compose exec -T db psql -U assislist assislist < assislist-2026-01-01.sql
 ```
 
-## Project conventions
+## Development
 
-- SDD: constitution → spec → plan → tasks → implement (spec is contract)
-- Repository pattern (TaskRepository) so storage can change without touching
-  routes/services
-- Files in the repo are the source of truth for code; Postgres holds task data
+```bash
+# server tests (needs a Postgres; set DATABASE_URL first)
+cd server && npm test
+# client
+cd client && npm run build
+```
+
+Spec-driven development: constitution → spec → plan → tasks → implement
+(spec is contract). See `specs/` and `AGENTS.md`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

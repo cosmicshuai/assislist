@@ -1,12 +1,12 @@
 # Tasks — 001-productivity-core
 
 ## Phase: Setup
-- [x] T-001 [P] [NFR-001] Scaffold server (npm init, ESM, express 5, pg, drizzle-orm@beta, drizzle-kit) + .env (DATABASE_URL, TODO_API_TOKEN) + .gitignore | DoD: `npm start` boots empty express on 192.168.1.180:3456, health route returns JSON | Depends: none
+- [x] T-001 [P] [NFR-001] Scaffold server (npm init, ESM, express 5, pg, drizzle-orm@beta, drizzle-kit) + .env (DATABASE_URL, TODO_API_TOKEN) + .gitignore | DoD: `npm start` boots empty express on 127.0.0.1:3456, health route returns JSON | Depends: none
 - [x] T-002 [P] [NFR-005] Scaffold client (Vite react-ts, Tailwind v4, shadcn/ui init, vite-plugin-pwa) | DoD: `npm run dev` serves styled landing page; PWA manifest wired | Depends: none
 
 ## Phase: Data layer
 - [x] T-003 [FR-009] [FR-001] [FR-002] [FR-003] Drizzle schema: tasks + task_dependencies tables; drizzle.config.ts | DoD: `drizzle-kit generate` produces migration; schema reflects plan §3 | Depends: T-001
-- [x] T-004 [FR-009] Apply migration to todo_system (drizzle-kit or SQL) | DoD: tables exist in Postgres; `psql \dt` shows tasks + task_dependencies | Depends: T-003
+- [x] T-004 [FR-009] Apply migration to assislist (drizzle-kit or SQL) | DoD: tables exist in Postgres; `psql \dt` shows tasks + task_dependencies | Depends: T-003
 - [x] T-005 [FR-009] TaskRepository interface + PgTaskRepository (CRUD, children query, deps query/insert/delete, complete with blocking check) | DoD: repository unit tests pass against test DB | Depends: T-004
 
 ## Phase: API core
