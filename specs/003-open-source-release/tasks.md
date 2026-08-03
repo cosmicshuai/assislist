@@ -135,10 +135,16 @@ Legend: [P] = parallelizable. Each task ≤ 1 day. DoD = definition of done.
   | scrubbed to generic 0.0.0.0/reverse-proxy wording; remaining hits are
   | explicit generic examples (SECURITY.md trust model, agents/README
   | local-override note) — allowed by AC-002.
-- [ ] T-020 [FR-010, AC-005] Tag v0.1.0, push tag; verify release.yml pushes
+- [x] T-020 [FR-010, AC-005] Tag v0.1.0, push tag; verify release.yml pushes
   ghcr.io/cosmicshuai/assislist:v0.1.0 + latest; verify image pullable.
   | DoD: GHCR package exists with v0.1.0 + latest tags.
   | Depends: T-012, T-013, T-019
+  | Verified 2026-08-02: tag v0.1.0 pushed; release workflow green; image
+  | pushed to ghcr.io/cosmicshuai/assislist:0.1.0 + :latest
+  | (sha256:0a0e2da26041...). PULL BLOCKED: GHCR package defaults to
+  | PRIVATE; needs one user action to make public (gh auth refresh
+  | -s write:packages, or GitHub UI: Packages → assislist → Settings →
+  | Change visibility → Public).
 - [ ] T-021 [AC-001..006] Full AC walkthrough + update README badges with
   real CI status; final commit.
   | DoD: all six ACs verified; repo in shippable state.
