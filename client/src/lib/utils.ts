@@ -1,6 +1,62 @@
 // lib/utils.ts — small helpers
+import type { Task } from '../api/client';
+
 export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
+}
+
+/**
+ * Topologically sort tasks so dependencies come before dependents
+ * (Kahn's algorithm, stable — ties keep ascending id order).
+ * Uses each task's blocked_by edges (the tasks it depends on).
+ * Cycles are tolerated: leftover nodes are appended in id order so nothing
+ * disappears from the list.
+ */
+export function topoSortTasks(tasks: Task[]): Task[] {
+  if (tasks.length <= 1) return tasks;
+  const byId = new Map<number, Task>(tasks.map((t) => [t.id, t]));
+  const inSet = new Set(tasks.map((t) => t.id));
+  const indegree = new Map<number, number>();
+  const dependents = new Map<number, number[]>(); // blockerId -> dependent task ids
+
+  for (const t of tasks) {
+    indegree.set(t.id, 0);
+  }
+  for (const t of tasks) {
+    for (const b of t.blocked_by || []) {
+      if (!inSet.has(b.id)) continue;
+      indegree.set(t.id, (indegree.get(t.id) || 0) + 1);
+      const list = dependents.get(b.id) || [];
+      list.push(t.id);
+      dependents.set(b.id, list);
+    }
+  }
+
+  const result: Task[] = [];
+  const ready = tasks
+    .filter((t) => (indegree.get(t.id) || 0) === 0)
+    .sort((a, b) => a.id - b.id);
+
+  while (ready.length > 0) {
+    const cur = ready.shift()!;
+    result.push(cur);
+    for (const depId of dependents.get(cur.id) || []) {
+      const next = indegree.get(depId)! - 1;
+      indegree.set(depId, next);
+      if (next === 0) {
+        // Insert in id order to keep the output stable
+        const node = byId.get(depId)!;
+        const insertAt = ready.findIndex((r) => r.id > node.id);
+        if (insertAt === -1) ready.push(node);
+        else ready.splice(insertAt, 0, node);
+      }
+    }
+  }
+
+  const remaining = tasks
+    .filter((t) => !result.some((r) => r.id === t.id))
+    .sort((a, b) => a.id - b.id);
+  return result.concat(remaining);
 }
 
 export const priorityColor: Record<string, string> = {

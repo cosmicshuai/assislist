@@ -29,6 +29,7 @@ import { api, type Project, type Task } from '../api/client';
 import { TaskCard } from './TaskCard';
 import { SourceTag } from './SourceTag';
 import { AddTaskForm } from './AddTaskForm';
+import { topoSortTasks } from '../lib/utils';
 
 interface Props {
   projectId: number;
@@ -64,7 +65,7 @@ export function ProjectDetail({ projectId, onBack }: Props) {
     load();
   }, [load]);
 
-  // Build recursive children map from the flat list
+  // Build recursive children map from the flat list (dependency order within each level)
   const childrenOf = useMemo(() => {
     const map = new Map<number, Task[]>();
     tasks.forEach((t) => {
@@ -74,11 +75,13 @@ export function ProjectDetail({ projectId, onBack }: Props) {
         map.set(t.parentId, list);
       }
     });
-    map.forEach((list) => list.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || '')));
+    map.forEach((list, parentId) => {
+      map.set(parentId, topoSortTasks(list));
+    });
     return map;
   }, [tasks]);
 
-  const rootTasks = useMemo(() => tasks.filter((t) => !t.parentId), [tasks]);
+  const rootTasks = useMemo(() => topoSortTasks(tasks.filter((t) => !t.parentId)), [tasks]);
 
   async function handleToggle(task: Task) {
     try {

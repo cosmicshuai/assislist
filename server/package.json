@@ -1,12 +1,17 @@
 {
-  "name": "todo-system-server",
+  "name": "assislist-server",
   "version": "0.1.0",
-  "description": "Todo System API — capture + task tree + dependencies (Postgres)",
+  "description": "AssisList API — capture + task tree + dependencies (Postgres)",
   "type": "module",
   "main": "src/index.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
+    "migrate": "node src/migrate.js",
     "test": "node --test 'test/**/*.test.js'",
     "typecheck": "tsc --noEmit"
   },

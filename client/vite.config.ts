@@ -9,9 +9,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Todo System',
-        short_name: 'Todos',
-        description: 'Personal productivity — capture from WhatsApp, manage here',
+        name: 'AssisList',
+        short_name: 'AssisList',
+        description: 'Self-hosted productivity — capture from WhatsApp/AI, manage here',
         theme_color: '#0b1220',
         background_color: '#0b1220',
         display: 'standalone',
@@ -27,11 +27,11 @@ export default defineConfig({
     }),
   ],
   server: {
-    host: '192.168.1.180',
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://192.168.1.180:3456',
+        target: 'http://127.0.0.1:3456',
         changeOrigin: true,
       },
     },

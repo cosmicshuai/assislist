@@ -1,13 +1,14 @@
-// config.js — load env for the Todo System server
+// config.js — load env for the AssisList server
 import 'dotenv/config';
 
 export const config = {
-  databaseUrl: process.env.DATABASE_URL || 'postgres://cosmic@/todo_system?host=/var/run/postgresql',
+  databaseUrl: process.env.DATABASE_URL || 'postgres://assislist:assislist@localhost:5432/assislist',
   apiToken: process.env.TODO_API_TOKEN || '',
   agentToken: process.env.TODO_AGENT_TOKEN || '',
   port: Number(process.env.PORT || 3456),
-  host: process.env.HOST || '192.168.1.180',
+  host: process.env.HOST || '0.0.0.0',
   deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
+  autoMigrate: process.env.AUTO_MIGRATE !== 'false',
 };
 
 export function requireApiToken() {

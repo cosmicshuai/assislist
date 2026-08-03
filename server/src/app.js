@@ -14,7 +14,7 @@ export function createApp() {
 
   // Liveness — unauthenticated
   app.get('/api/v1/health', (req, res) => {
-    res.json({ ok: true, service: 'todo-system', time: new Date().toISOString() });
+    res.json({ ok: true, service: 'assislist', time: new Date().toISOString() });
   });
 
   // Root — serve the client (single-port deployment: API + UI on :3456)

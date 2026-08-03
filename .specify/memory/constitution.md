@@ -25,6 +25,9 @@ can read and write it programmatically.
 - P5: Agent-friendly. The API is the contract for the WhatsApp/AI pipeline;
   every task has stable IDs, machine-readable status, urgency, dependencies.
 - P6: Local-first, single user. No auth/SSO in v1 (LAN + Tailscale only).
+  AMENDED 2026-08-02 (spec 003): project is open-source (MIT) and
+  distributable — self-hosted via Docker Compose, single-user trust model,
+  bring-your-own-network security. No SSO/login screens in v1.
 - P7: Incremental. MVP spec first; advanced features in later NNN folders.
 - P8: Clean UX. The UI must feel better than Vikunja's — fast, focused,
   mobile-usable. No heavy framework chrome.
