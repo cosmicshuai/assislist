@@ -25,6 +25,8 @@ jobs:
           --health-retries 12
     env:
       DATABASE_URL: postgres://assislist:assislist@localhost:5432/assislist_test
+      TODO_API_TOKEN: ci-test-user-token-0123456789abcdef
+      TODO_AGENT_TOKEN: ci-test-agent-token-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
