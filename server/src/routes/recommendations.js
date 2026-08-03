@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { PgTaskRepository } from '../repositories/PgTaskRepository.js';
 import { topNext, longTerm } from '../services/recommendationService.js';
 import { enrichReasons } from '../services/aiService.js';
+import { BadRequestError, optionalCount } from '../lib/params.js';
 
 const router = Router();
 const repo = new PgTaskRepository();
@@ -14,7 +15,7 @@ const AGENT_TTL_MS = 7 * 36e5; // agent picks are fresh for 7h
 // - ?ai=1: additionally rewrite reasons via DeepSeek (if key set).
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 3, 6);
+    const limit = optionalCount(req.query.limit, 'limit', { min: 1, max: 6, fallback: 3 });
 
     // Prefer fresh agent picks, but never surface completed/abandoned items
     const agent = await repo.getAgentRecommendations();
@@ -51,6 +52,7 @@ router.get('/', async (req, res) => {
 
     res.json(result);
   } catch (e) {
+    if (e instanceof BadRequestError) return res.status(e.status).json({ error: e.message });
     console.error(e);
     res.status(500).json({ error: 'Internal error' });
   }

@@ -6,6 +6,7 @@ import { deriveUrgency } from '../services/urgencyService.js';
 import { TaskNotFoundError, DependencyBlockedError } from '../repositories/TaskRepository.js';
 import { ProjectNotFoundError } from '../repositories/ProjectRepository.js';
 import { agentForbidden, agentCanModifyTask } from '../middleware/agentGuard.js';
+import { BadRequestError, optionalId, requireId } from '../lib/params.js';
 
 const router = Router();
 const repo = new PgTaskRepository();
@@ -15,6 +16,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const STATUSES = ['active', 'completed', 'abandoned'];
 
 function handleError(res, e) {
+  if (e instanceof BadRequestError) return res.status(e.status).json({ error: e.message });
   if (e instanceof TaskNotFoundError) return res.status(404).json({ error: e.message });
   if (e instanceof ProjectNotFoundError) return res.status(404).json({ error: e.message });
   if (e instanceof DependencyBlockedError) return res.status(400).json({ error: e.message, blockedBy: e.blocker });
@@ -35,8 +37,9 @@ router.get('/', async (req, res) => {
       urgency,
       due,
       q,
-      projectId: project_id !== undefined ? Number(project_id) : undefined,
-      parentId: parent_id !== undefined ? Number(parent_id) : undefined,
+      projectId: optionalId(project_id, 'project_id'),
+      // ?parent_id=null selects root tasks only; omitted means no filter.
+      parentId: parent_id === 'null' ? null : optionalId(parent_id, 'parent_id'),
       sort,
       order,
     });
@@ -49,7 +52,7 @@ router.get('/', async (req, res) => {
 // GET /api/v1/tasks/:id — detail + children + deps
 router.get('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const task = await repo.getById(id);
     const [children, blockedBy, blocks] = await Promise.all([
       repo.getChildren(id),
@@ -70,9 +73,9 @@ router.post('/', async (req, res) => {
     if (priority && !PRIORITIES.includes(priority)) return res.status(400).json({ error: 'Invalid priority' });
 
     // Resolve project: explicit project_id, or inherit from parent
-    let projectId = project_id !== undefined && project_id !== null ? Number(project_id) : null;
+    let projectId = optionalId(project_id, 'project_id') ?? null;
     if (parent_id !== undefined && parent_id !== null) {
-      const parent = await repo.getById(Number(parent_id));
+      const parent = await repo.getById(requireId(parent_id, 'parent_id'));
       if (projectId === null) projectId = parent.projectId;
       if (parent.projectId !== projectId) {
         return res.status(400).json({ error: 'Parent task belongs to a different project' });
@@ -96,7 +99,7 @@ router.post('/', async (req, res) => {
       priority: priority ?? 'medium',
       urgency: deriveUrgency({ priority: priority ?? 'medium', dueDate: due_date }),
       dueDate: due_date || null,
-      parentId: parent_id || null,
+      parentId: parent_id ? requireId(parent_id, 'parent_id') : null,
       source: req.actor === 'agent' ? 'whatsapp' : 'manual',
     });
     res.status(201).json(task);
@@ -108,7 +111,7 @@ router.post('/', async (req, res) => {
 // PUT /api/v1/tasks/:id — update (agent: whatsapp only)
 router.put('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = requireId(req.params.id);
     const current = await repo.getById(id);
     if (!agentCanModifyTask(req, current)) return agentForbidden(res, 'user-created tasks');
 
@@ -125,7 +128,7 @@ router.put('/:id', async (req, res) => {
     }
     if (due_date !== undefined) patch.dueDate = due_date || null;
     if (parent_id !== undefined) {
-      const newParentId = parent_id || null;
+      const newParentId = parent_id ? requireId(parent_id, 'parent_id') : null;
       if (newParentId) {
         const parent = await repo.getById(newParentId);
         if (parent.projectId !== current.projectId) {
@@ -153,9 +156,9 @@ router.put('/:id', async (req, res) => {
 // PATCH /api/v1/tasks/:id/complete — strict dependency check (agent: whatsapp only)
 router.patch('/:id/complete', async (req, res) => {
   try {
-    const current = await repo.getById(Number(req.params.id));
+    const current = await repo.getById(requireId(req.params.id));
     if (!agentCanModifyTask(req, current)) return agentForbidden(res, 'user-created tasks');
-    const task = await repo.complete(Number(req.params.id));
+    const task = await repo.complete(requireId(req.params.id));
     res.json(task);
   } catch (e) {
     handleError(res, e);
@@ -165,9 +168,9 @@ router.patch('/:id/complete', async (req, res) => {
 // PATCH /api/v1/tasks/:id/abandon — mark as abandoned (agent: whatsapp only)
 router.patch('/:id/abandon', async (req, res) => {
   try {
-    const current = await repo.getById(Number(req.params.id));
+    const current = await repo.getById(requireId(req.params.id));
     if (!agentCanModifyTask(req, current)) return agentForbidden(res, 'user-created tasks');
-    const task = await repo.abandon(Number(req.params.id));
+    const task = await repo.abandon(requireId(req.params.id));
     res.json(task);
   } catch (e) {
     handleError(res, e);
@@ -177,9 +180,9 @@ router.patch('/:id/abandon', async (req, res) => {
 // DELETE /api/v1/tasks/:id (agent: whatsapp only)
 router.delete('/:id', async (req, res) => {
   try {
-    const current = await repo.getById(Number(req.params.id));
+    const current = await repo.getById(requireId(req.params.id));
     if (!agentCanModifyTask(req, current)) return agentForbidden(res, 'user-created tasks');
-    const result = await repo.delete(Number(req.params.id));
+    const result = await repo.delete(requireId(req.params.id));
     res.json(result);
   } catch (e) {
     handleError(res, e);

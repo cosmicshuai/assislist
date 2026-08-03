@@ -132,7 +132,7 @@ Auth: `Authorization: Bearer <token>` on all endpoints except `/api/v1/health`.
 | PATCH | /api/v1/projects/:id/restore | restore (agent 403) |
 | DELETE | /api/v1/projects/:id | delete project (cascades all tasks; agent 403) |
 | POST | /api/v1/captures | AI breakdown → project + root tasks, or task tree under existing project_id |
-| GET | /api/v1/tasks | list + filters (status, priority, urgency, due, q, project_id, parent_id, sort) |
+| GET | /api/v1/tasks | list + filters (status, priority, urgency, due, q, project_id, parent_id, sort). `parent_id=null` returns root tasks only |
 | GET | /api/v1/tasks/:id | detail + children + blocked_by + blocks |
 | POST | /api/v1/tasks | create single (project_id required; agent: subtasks only) |
 | PUT | /api/v1/tasks/:id | update (agent: source=whatsapp only) |
