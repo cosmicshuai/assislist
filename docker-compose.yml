@@ -43,6 +43,13 @@ services:
       AUTO_MIGRATE: "true"
       TRUST_PROXY: ${TRUST_PROXY:-0}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Every remaining knob the README documents. Without these lines the
+      # variable sits in .env, compose never forwards it, and the setting
+      # silently does nothing — the worst failure mode for a security control.
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-2592000}
+      ENABLE_HSTS: ${ENABLE_HSTS:-false}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
+      LOGIN_ATTEMPTS_PER_15MIN: ${LOGIN_ATTEMPTS_PER_15MIN:-10}
     depends_on:
       db:
         condition: service_healthy
