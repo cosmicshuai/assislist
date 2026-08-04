@@ -3,17 +3,23 @@
 // The bundle ships no credential (see api/client.ts). On first load the app
 // asks the server whether this browser already holds a session cookie; if not
 // it shows the unlock screen, which exchanges the user token for one.
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
+import Fade from '@mui/material/Fade';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { auth, setUnauthorizedHandler } from '../api/client';
+import { DURATION, EASING } from '../theme/motion';
 
 interface AuthValue {
   logout: () => Promise<void>;
@@ -31,6 +37,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [reveal, setReveal] = useState(false);
+  const fieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,23 +69,43 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setStatus('unlocked');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not unlock');
+      // Keep the caret where the correction has to happen. Select the text so
+      // a re-paste replaces it instead of appending to a wrong token.
+      requestAnimationFrame(() => fieldRef.current?.select());
     } finally {
       setSubmitting(false);
     }
   };
 
   if (status === 'checking') {
+    // A spinner here flashes for one request and then swaps to a card of a
+    // different size. A card-shaped placeholder in the same position means the
+    // unlock form fades in rather than jumping into place.
     return (
-      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <CircularProgress aria-label="Checking session" />
+      <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3 }}>
+        <Box role="status" aria-label="Checking session" sx={{ width: '100%', maxWidth: 420 }}>
+          <Skeleton variant="rounded" height={332} sx={{ borderRadius: 7 }} />
+        </Box>
       </Box>
     );
   }
 
   if (status === 'locked') {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 3 }}>
-        <Card sx={{ p: 4, width: '100%', maxWidth: 420, bgcolor: 'surfaceContainerLow' }}>
+      <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3 }}>
+        <Card
+          sx={{
+            p: 4,
+            width: '100%',
+            maxWidth: 420,
+            bgcolor: 'surfaceContainerLow',
+            animation: `unlockIn ${DURATION.medium2}ms ${EASING.emphasizedDecelerate} both`,
+            '@keyframes unlockIn': {
+              from: { opacity: 0, transform: 'translateY(8px)' },
+              to: { opacity: 1, transform: 'none' },
+            },
+          }}
+        >
           <Stack spacing={3} component="form" onSubmit={submit}>
             <Stack spacing={1.5} alignItems="center" textAlign="center">
               <Box
@@ -89,23 +117,59 @@ export function AuthGate({ children }: { children: ReactNode }) {
               >
                 <LockOutlinedIcon />
               </Box>
-              <Typography variant="h5">Unlock AssisList</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Enter your <code>TODO_API_TOKEN</code>. It is exchanged for a
-                session cookie and never stored in the page.
+              <Typography variant="headlineSmall">Unlock AssisList</Typography>
+              <Typography variant="bodyMedium" color="text.secondary">
+                Paste your API token to unlock this device. The page never
+                stores it — the server returns a session cookie instead.
               </Typography>
             </Stack>
 
-            {error && <Alert severity="error">{error}</Alert>}
+            {/* An M3 error is a tonal container, not MUI's default banner. */}
+            <Fade in={Boolean(error)} timeout={DURATION.short3} unmountOnExit>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="flex-start"
+                role="alert"
+                sx={{ bgcolor: 'errorContainer', color: 'onErrorContainer', p: 1.5, borderRadius: 3 }}
+              >
+                <ErrorOutlineIcon fontSize="small" sx={{ mt: '2px' }} />
+                <Typography variant="bodyMedium">{error}</Typography>
+              </Stack>
+            </Fade>
 
             <TextField
+              inputRef={fieldRef}
               label="API token"
-              type="password"
+              type={reveal ? 'text' : 'password'}
               value={token}
               onChange={(e) => setToken(e.target.value)}
               autoFocus
               autoComplete="current-password"
+              name="assislist-api-token"
               fullWidth
+              error={Boolean(error)}
+              // Where the token actually lives, kept as a hint rather than as
+              // the headline — the operator needs it, but "TODO_API_TOKEN" is
+              // not a sentence to greet someone with.
+              helperText={'TODO_API_TOKEN from your .env'}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setReveal((v) => !v)}
+                        edge="end"
+                        // A long random token is easy to mis-paste and
+                        // impossible to check behind dots.
+                        aria-label={reveal ? 'Hide token' : 'Show token'}
+                      >
+                        {reveal ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
 
             <Button
