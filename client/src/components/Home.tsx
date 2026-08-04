@@ -7,7 +7,6 @@ import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
@@ -20,6 +19,8 @@ import { SourceTag } from './SourceTag';
 import { AddProjectForm } from './AddProjectForm';
 import { AddTaskForm } from './AddTaskForm';
 import { AddFab } from './AddFab';
+import { ListSkeleton, LoadingAnnouncer } from './Skeletons';
+import { interactiveSurface } from '../theme/surfaces';
 import { formatDue } from '../lib/utils';
 
 interface Props {
@@ -34,15 +35,17 @@ export function Home({ onOpenProject }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [addMode, setAddMode] = useState<AddMode>(null);
 
-  async function load() {
-    setLoading(true);
+  // As in ProjectDetail: a refresh triggered by adding something must not
+  // collapse the page back to a loading state.
+  async function load({ background = false } = {}) {
+    if (!background) setLoading(true);
     setError(null);
     try {
       setData(await api.getRecommendations());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      if (!background) setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }
 
@@ -51,7 +54,17 @@ export function Home({ onOpenProject }: Props) {
   }, []);
 
   if (error) return <Alert severity="error">{error}</Alert>;
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
+  if (loading) {
+    return (
+      <>
+        <LoadingAnnouncer label="Loading suggestions" />
+        <Stack spacing={4}>
+          <ListSkeleton count={3} />
+          <ListSkeleton count={3} />
+        </Stack>
+      </>
+    );
+  }
 
   const next = data?.top_next || [];
   const term = data?.long_term || [];
@@ -59,27 +72,21 @@ export function Home({ onOpenProject }: Props) {
   function TaskTile({ task, reason }: { task: Task; reason: string }) {
     const done = task.status === 'completed';
     return (
-      <Card
-        elevation={0}
-        onClick={() => onOpenProject(task.projectId)}
-        sx={{
-          bgcolor: 'surfaceContainer',
-          transition: 'transform 0.18s cubic-bezier(.2,.8,.4,1), box-shadow 0.2s, background-color 0.2s',
-          '&:hover': { transform: 'translateY(-3px)', boxShadow: 8, bgcolor: 'surfaceContainerHigh' },
-          opacity: done ? 0.55 : 1,
-        }}
-      >
-        <CardActionArea>
+      <Card elevation={0} sx={{ ...interactiveSurface(), opacity: done ? 0.55 : 1 }}>
+        {/* The handler belongs on the action area, which is the focusable
+            button; on the Card it was reachable by keyboard only because the
+            click happened to bubble up from a button with no handler. */}
+        <CardActionArea onClick={() => onOpenProject(task.projectId)}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Stack direction="row" spacing={1.5} alignItems="flex-start">
               <Avatar sx={{ width: 40, height: 40, bgcolor: 'primaryContainer', color: 'onPrimaryContainer', fontSize: 20 }}>
                 {task.title.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: done ? 'line-through' : 'none' }}>
+                <Typography variant="titleMedium" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: done ? 'line-through' : 'none' }}>
                   {task.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.8rem' }}>
+                <Typography variant="bodySmall" color="text.secondary" sx={{ mt: 0.25 }}>
                   {reason}
                 </Typography>
               </Box>
@@ -101,27 +108,18 @@ export function Home({ onOpenProject }: Props) {
   function ProjectTile({ project, reason }: { project: Project; reason: string }) {
     const done = project.status === 'completed';
     return (
-      <Card
-        elevation={0}
-        onClick={() => onOpenProject(project.id)}
-        sx={{
-          bgcolor: 'surfaceContainer',
-          transition: 'transform 0.18s cubic-bezier(.2,.8,.4,1), box-shadow 0.2s, background-color 0.2s',
-          '&:hover': { transform: 'translateY(-3px)', boxShadow: 8, bgcolor: 'surfaceContainerHigh' },
-          opacity: done ? 0.55 : 1,
-        }}
-      >
-        <CardActionArea>
+      <Card elevation={0} sx={{ ...interactiveSurface(), opacity: done ? 0.55 : 1 }}>
+        <CardActionArea onClick={() => onOpenProject(project.id)}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Stack direction="row" spacing={1.5} alignItems="flex-start">
               <Avatar sx={{ width: 40, height: 40, bgcolor: 'tertiaryContainer', color: 'onTertiaryContainer', fontSize: 20 }}>
                 {project.title.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: done ? 'line-through' : 'none' }}>
+                <Typography variant="titleMedium" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: done ? 'line-through' : 'none' }}>
                   {project.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.8rem' }}>
+                <Typography variant="bodySmall" color="text.secondary" sx={{ mt: 0.25 }}>
                   {reason}
                 </Typography>
               </Box>
@@ -146,12 +144,12 @@ export function Home({ onOpenProject }: Props) {
     <Box>
       {addMode === 'project' && (
         <Box sx={{ mb: 2 }}>
-          <AddProjectForm onCreated={() => { setAddMode(null); load(); }} />
+          <AddProjectForm onCreated={() => { setAddMode(null); load({ background: true }); }} />
         </Box>
       )}
       {addMode === 'task' && (
         <Box sx={{ mb: 2 }}>
-          <AddTaskForm onCreated={() => { setAddMode(null); load(); }} />
+          <AddTaskForm onCreated={() => { setAddMode(null); load({ background: true }); }} />
         </Box>
       )}
 

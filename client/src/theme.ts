@@ -5,6 +5,7 @@
 // theme: the M3 type scale, state layers, and tonal elevation.
 import { alpha, createTheme, type Theme } from '@mui/material/styles';
 import { darkScheme, lightScheme, type ColorScheme } from './theme/tokens';
+import { DURATION, EASING } from './theme/motion';
 
 // Roles MUI doesn't know about, declared so `bgcolor="surfaceContainer"` and
 // friends type-check and resolve.
@@ -43,6 +44,22 @@ declare module '@mui/material/styles' {
     labelSmall: React.CSSProperties;
   }
   interface TypographyVariantsOptions extends Partial<TypographyVariants> { }
+}
+
+/** The M3 scale names, so both the theme and the `variant` prop stay in step. */
+type M3Variant =
+  | 'displayLarge' | 'displayMedium' | 'displaySmall'
+  | 'headlineLarge' | 'headlineMedium' | 'headlineSmall'
+  | 'titleLarge' | 'titleMedium' | 'titleSmall'
+  | 'bodyLarge' | 'bodyMedium' | 'bodySmall'
+  | 'labelLarge' | 'labelMedium' | 'labelSmall';
+
+// Declaring the variants on the theme is only half the job — without this the
+// scale exists but `<Typography variant="titleMedium">` does not type-check,
+// which is why the screens had been reaching for MUI's legacy h6/subtitle1
+// names and then patching the size back with one-off `fontSize` overrides.
+declare module '@mui/material/Typography' {
+  interface TypographyPropsVariantOverrides extends Record<M3Variant, true> { }
 }
 
 // The Material 3 type scale: size / line-height / weight / tracking, in the
@@ -145,12 +162,50 @@ export const getTheme = (mode: 'light' | 'dark'): Theme => {
       overline: { ...type.labelSmall, textTransform: 'uppercase' },
     },
     components: {
+      MuiTypography: {
+        defaultProps: {
+          // Without this every M3 variant renders as <span>. MUI only knows
+          // how to map its own built-in names to elements, and falls back to
+          // an inline span for anything else — which silently ran a card's
+          // title and its body text together on one line.
+          variantMapping: {
+            displayLarge: 'h1',
+            displayMedium: 'h1',
+            displaySmall: 'h2',
+            headlineLarge: 'h2',
+            headlineMedium: 'h3',
+            headlineSmall: 'h4',
+            titleLarge: 'h5',
+            titleMedium: 'h6',
+            titleSmall: 'h6',
+            bodyLarge: 'p',
+            bodyMedium: 'p',
+            bodySmall: 'p',
+            labelLarge: 'span',
+            labelMedium: 'span',
+            labelSmall: 'span',
+          },
+        },
+      },
       MuiCssBaseline: {
         styleOverrides: {
           // Tells the browser to render form controls and scrollbars in the
           // matching scheme — without it, dark mode gets light native chrome.
           ':root': { colorScheme: mode },
           body: { backgroundColor: s.background, color: s.onSurface },
+          // Honour the OS "reduce motion" setting globally. Doing it here
+          // rather than per-component means a transition added later cannot
+          // forget to opt in. Motion is not removed outright — durations
+          // collapse to ~0 so transitionend still fires and components that
+          // wait on it (Snackbar's onExited, Collapse) keep working.
+          '@media (prefers-reduced-motion: reduce)': {
+            '*, *::before, *::after': {
+              animationDuration: '0.01ms !important',
+              animationIterationCount: '1 !important',
+              transitionDuration: '0.01ms !important',
+              scrollBehavior: 'auto !important',
+            },
+          },
         },
       },
       MuiPaper: {
@@ -234,7 +289,64 @@ export const getTheme = (mode: 'light' | 'dark'): Theme => {
       },
       MuiAppBar: {
         styleOverrides: {
-          root: { backgroundImage: 'none' },
+          root: {
+            backgroundImage: 'none',
+            // The bar starts flat on the page background and moves to a
+            // container tone once content scrolls under it (see App.tsx).
+            // M3 uses that tone change, not a shadow, to separate the two.
+            transition: `background-color ${DURATION.short4}ms ${EASING.standard}`,
+          },
+        },
+      },
+      MuiBottomNavigation: {
+        styleOverrides: {
+          root: {
+            backgroundColor: s.surfaceContainer,
+            height: 64,
+          },
+        },
+      },
+      MuiBottomNavigationAction: {
+        styleOverrides: {
+          root: {
+            color: s.onSurfaceVariant,
+            paddingTop: 12,
+            gap: 4,
+            '&.Mui-selected': { color: s.onSecondaryContainer },
+            // M3 marks the active destination with a pill behind the icon
+            // rather than by colouring the icon alone.
+            '& .MuiBottomNavigationAction-label': {
+              ...type.labelMedium,
+              transition: `opacity ${DURATION.short3}ms ${EASING.standard}`,
+            },
+            '& .MuiSvgIcon-root': {
+              position: 'relative',
+              zIndex: 1,
+              transition: `color ${DURATION.short3}ms ${EASING.standard}`,
+            },
+          },
+        },
+      },
+      MuiSkeleton: {
+        defaultProps: { animation: 'wave' },
+        styleOverrides: {
+          root: { backgroundColor: alpha(s.onSurface, 0.08) },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            backgroundColor: s.surfaceContainerHigh,
+            borderRadius: SHAPE.extraLarge,
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            backgroundColor: s.surfaceContainer,
+            borderRadius: SHAPE.medium,
+          },
         },
       },
     },

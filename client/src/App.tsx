@@ -1,12 +1,14 @@
 // App.tsx — view switch: Home (suggestions) ↔ Board ↔ project detail
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Box from '@mui/material/Box';
+import useScrollTrigger from '@mui/material/useScrollTrigger';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
@@ -17,9 +19,8 @@ import { useAuth } from './components/AuthGate';
 import { Home } from './components/Home';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ProjectDetail } from './components/ProjectDetail';
+import { BottomNav, BOTTOM_NAV_HEIGHT, type View } from './components/BottomNav';
 import { useTheme } from './context/ThemeContext';
-
-type View = 'home' | 'board';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -27,20 +28,42 @@ export default function App() {
   const { theme, toggle } = useTheme();
   const { logout } = useAuth();
 
+  // M3 top app bar: flat on the background until content passes beneath it,
+  // then raised to a container tone. Tone, not shadow — the palette expresses
+  // elevation tonally, and a shadow here would contradict that.
+  const scrolled = useScrollTrigger({ disableHysteresis: true, threshold: 0 });
+
   const openProject = (id: number) => setProjectId(id);
-  const backHome = () => { setProjectId(null); setView('home'); };
+  // Unwind the history entry rather than just clearing state, so the in-app
+  // back button and the browser's stay in step. The popstate handler is what
+  // actually clears projectId, for both paths.
+  const backHome = () => window.history.back();
+
+  // Hardware/browser back should leave a project rather than exit the app —
+  // in an installed PWA there is no browser chrome to go back with.
+  useEffect(() => {
+    if (projectId === null) return;
+    window.history.pushState({ project: projectId }, '');
+    const onPop = () => setProjectId(null);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [projectId]);
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <AppBar
         position="sticky"
         elevation={0}
-        color="transparent"
-        sx={{ borderBottom: 1, borderColor: 'divider', backdropFilter: 'blur(8px)' }}
+        sx={{
+          bgcolor: scrolled ? 'surfaceContainer' : 'background.default',
+          color: 'text.primary',
+          borderBottom: 1,
+          borderColor: scrolled ? 'divider' : 'transparent',
+        }}
       >
         <Toolbar sx={{ gap: 1 }}>
           <CheckCircleOutlineIcon color="primary" />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="titleLarge" component="div" sx={{ flexGrow: 1 }}>
             AssisList
           </Typography>
           {projectId === null && (
@@ -49,7 +72,8 @@ export default function App() {
               exclusive
               value={view}
               onChange={(_, v) => v && setView(v)}
-              sx={{ mr: 1 }}
+              // The bottom navigation bar owns this on mobile.
+              sx={{ mr: 1, display: { xs: 'none', sm: 'flex' } }}
             >
               <ToggleButton value="home" aria-label="Home">
                 <HomeIcon fontSize="small" />
@@ -59,16 +83,32 @@ export default function App() {
               </ToggleButton>
             </ToggleButtonGroup>
           )}
-          <IconButton onClick={toggle} color="inherit" aria-label="Toggle theme">
-            {theme === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-          </IconButton>
-          <IconButton onClick={logout} color="inherit" aria-label="Lock">
-            <LogoutIcon />
-          </IconButton>
+          <Tooltip title={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
+            <IconButton onClick={toggle} color="inherit" aria-label="Toggle theme">
+              {theme === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Lock">
+            <IconButton onClick={logout} color="inherit" aria-label="Lock">
+              <LogoutIcon />
+            </IconButton>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 }, maxWidth: 1000, width: '100%', mx: 'auto' }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: { xs: 2, md: 3 },
+          maxWidth: 1000,
+          width: '100%',
+          mx: 'auto',
+          // Clear the fixed navigation bar on mobile so the last card is not
+          // trapped underneath it.
+          pb: { xs: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`, sm: 3 },
+        }}
+      >
         {projectId !== null ? (
           <ProjectDetail projectId={projectId} onBack={backHome} />
         ) : view === 'home' ? (
@@ -77,6 +117,8 @@ export default function App() {
           <KanbanBoard onOpenProject={openProject} />
         )}
       </Box>
+
+      {projectId === null && <BottomNav view={view} onChange={setView} />}
     </Box>
   );
 }

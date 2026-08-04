@@ -17,6 +17,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import type { Task } from '../api/client';
 import { formatDue } from '../lib/utils';
 import { SourceTag } from './SourceTag';
+import { DURATION, transition } from '../theme/motion';
 
 interface Props {
   task: Task;
@@ -34,7 +35,18 @@ export function TaskCard({ task, children = [], childrenOf, onToggle, onDelete, 
   const hasChildren = children.length > 0;
 
   return (
-      <Card variant="outlined" sx={{ opacity: completed ? 0.6 : 1, bgcolor: 'surfaceContainer', border: 0 }}>
+      <Card
+        variant="outlined"
+        sx={{
+          opacity: completed ? 0.6 : 1,
+          bgcolor: 'surfaceContainer',
+          border: 0,
+          // Completing a task changes opacity and strike-through; easing that
+          // makes the optimistic update read as a state change rather than a
+          // repaint.
+          transition: transition(['opacity', 'background-color'], DURATION.short4),
+        }}
+      >
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" alignItems="flex-start" spacing={1}>
           <Tooltip title={blocked.length > 0 ? `Blocked by ${blocked[0].title}` : completed ? 'Reopen' : 'Complete'}>
@@ -64,9 +76,10 @@ export function TaskCard({ task, children = [], childrenOf, onToggle, onDelete, 
                   onClick={() => setExpanded(!expanded)}
                   sx={{
                     transform: expanded ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.2s',
+                    transition: transition(['transform'], DURATION.short4),
                   }}
-                  aria-label={expanded ? 'Collapse' : 'Expand'}
+                  aria-label={`${expanded ? 'Collapse' : 'Expand'} ${children.length} subtask${children.length === 1 ? '' : 's'}`}
+                  aria-expanded={expanded}
                 >
                   <ExpandMoreIcon fontSize="small" />
                 </IconButton>
@@ -100,13 +113,25 @@ export function TaskCard({ task, children = [], childrenOf, onToggle, onDelete, 
           </Box>
 
           <Stack direction="row" spacing={0.25}>
+            {/* A Tooltip gives a hover hint, not an accessible name — these
+                buttons were unreachable by name for screen readers and for
+                anything driving the UI by role. */}
             <Tooltip title="Add subtask">
-              <IconButton size="small" onClick={() => onAddSubtask(task)}>
+              <IconButton
+                size="small"
+                aria-label={`Add subtask to ${task.title}`}
+                onClick={() => onAddSubtask(task)}
+              >
                 <AddIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             <Tooltip title="Delete">
-              <IconButton size="small" color="error" onClick={() => onDelete(task)}>
+              <IconButton
+                size="small"
+                color="error"
+                aria-label={`Delete ${task.title}`}
+                onClick={() => onDelete(task)}
+              >
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>
             </Tooltip>
