@@ -218,7 +218,8 @@ see `.env.example` (compose) and `server/.env.example` (manual install).
 | `POSTGRES_PASSWORD` | — | **Required** (compose). Any characters are safe; it is not embedded in a URL |
 | `TODO_AGENT_TOKEN` | unset | Agent scope. Must differ from the user token |
 | `DATABASE_URL` | localhost fallback | Connection string. Alternatively set `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD`/`PGDATABASE`, which avoids URL-escaping the password |
-| `PORT` / `HOST` | `3456` / `0.0.0.0` | Bind address |
+| `PORT` / `HOST` | `3456` / `0.0.0.0` | Port, and the address the server binds inside the container |
+| `BIND_ADDR` | `0.0.0.0` | Compose only: which host interface to publish `PORT` on. Narrow it to one address when another process already holds that port on a different interface — a Tailscale or WireGuard proxy listening on `<vpn-ip>:3456` makes a `0.0.0.0` bind fail with `address already in use` |
 | `AUTO_MIGRATE` | `true` | Run migrations at boot; the process exits non-zero if they fail |
 | `TRUST_PROXY` | `0` | Number of reverse proxies in front (see above) |
 | `SESSION_TTL_SECONDS` | `2592000` (30d) | Browser session lifetime |

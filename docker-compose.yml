@@ -25,7 +25,12 @@ services:
     build: .
     image: ghcr.io/cosmicshuai/assislist:${ASSISLIST_VERSION:-latest}
     ports:
-      - "${PORT:-3456}:3456"
+      # BIND_ADDR defaults to every interface, which is the right default for a
+      # box whose only job is this app. Set it to one address when something
+      # else already listens on this port on another interface -- a tailscaled
+      # or WireGuard proxy holding <vpn-ip>:3456 makes a 0.0.0.0 bind fail with
+      # "address already in use", and narrowing the bind is the fix.
+      - "${BIND_ADDR:-0.0.0.0}:${PORT:-3456}:3456"
     environment:
       # Discrete connection parameters rather than a composed DATABASE_URL, so
       # a password containing @ : / ? # works instead of producing a malformed
