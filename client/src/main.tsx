@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.tsx'
 import { AuthGate } from './components/AuthGate.tsx'
 import { ThemeProvider, useTheme } from './context/ThemeContext.tsx'
+import { SnackbarProvider } from './context/SnackbarContext.tsx'
 import { getTheme } from './theme.ts'
 
 function Root() {
@@ -13,9 +14,12 @@ function Root() {
   return (
     <MuiThemeProvider theme={getTheme(theme)}>
       <CssBaseline />
-      <AuthGate>
-        <App />
-      </AuthGate>
+      {/* Outside AuthGate so the unlock screen can report failures too. */}
+      <SnackbarProvider>
+        <AuthGate>
+          <App />
+        </AuthGate>
+      </SnackbarProvider>
     </MuiThemeProvider>
   );
 }

@@ -1,6 +1,6 @@
 // components/AddFab.tsx — Material 3 speed-dial: hover (1s) or tap opens
 // extended-FAB actions ("New project" / "New task") with staggered entrance.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Fab from '@mui/material/Fab';
 import Grow from '@mui/material/Grow';
@@ -8,15 +8,20 @@ import Stack from '@mui/material/Stack';
 import AddIcon from '@mui/icons-material/Add';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import { BOTTOM_NAV_HEIGHT } from './BottomNav';
+import { DURATION, EASING, transition } from '../theme/motion';
 
 interface Props {
   onAddProject: () => void;
   onAddTask: () => void;
 }
 
-const HOVER_OPEN_MS = 1000; // hold hover on the FAB this long to open without clicking
-const ENTER_MS = 220;
-const EXIT_MS = 160;
+// Long enough not to fire while the pointer is merely crossing the corner,
+// short enough to feel like a hint rather than a wait. The old 1000ms read as
+// unresponsive: users clicked before it ever triggered.
+const HOVER_OPEN_MS = 400;
+const ENTER_MS = DURATION.medium1;
+const EXIT_MS = DURATION.short3;
 
 interface Action {
   key: string;
@@ -30,39 +35,64 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
   const [mounted, setMounted] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Which gesture opened the menu. Hover-opened menus close when the pointer
+  // leaves; tapped ones stay until dismissed. The old code claimed to do this
+  // in a comment but closed on mouseleave either way, so on a hybrid device a
+  // deliberate tap could be undone by an incidental pointer move.
+  const openedByHover = useRef(false);
+  const fabRef = useRef<HTMLButtonElement>(null);
 
   const clearTimers = () => {
     if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
     if (exitTimer.current) { clearTimeout(exitTimer.current); exitTimer.current = null; }
   };
 
-  const openMenu = () => {
+  const openMenu = (viaHover: boolean) => {
     clearTimers();
+    openedByHover.current = viaHover;
     setMounted(true);
     requestAnimationFrame(() => setOpen(true));
   };
 
-  const closeMenu = () => {
+  const closeMenu = ({ restoreFocus = false } = {}) => {
     clearTimers();
     setOpen(false);
     exitTimer.current = setTimeout(() => setMounted(false), EXIT_MS);
+    if (restoreFocus) fabRef.current?.focus();
   };
 
   const handleMouseEnter = () => {
+    if (open) return;
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(openMenu, HOVER_OPEN_MS);
+    hoverTimer.current = setTimeout(() => openMenu(true), HOVER_OPEN_MS);
   };
 
   const handleMouseLeave = () => {
-    // Only auto-close via hover; a deliberate click (touch) keeps it open
-    if (open) closeMenu();
-    else if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
+    if (open) {
+      if (openedByHover.current) closeMenu();
+    } else if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
   };
 
   const handleClick = () => {
     if (open) closeMenu();
-    else openMenu();
+    else openMenu(false);
   };
+
+  // Escape closes the menu and returns focus to the FAB, so keyboard users
+  // are not stranded inside a dismissed overlay.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); closeMenu({ restoreFocus: true }); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  useEffect(() => clearTimers, []);
 
   const runAction = (action: Action) => {
     closeMenu();
@@ -79,8 +109,14 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
       {/* Click-away scrim (transparent) — only while open */}
       {mounted && (
         <Box
-          onClick={closeMenu}
-          sx={{ position: 'fixed', inset: 0, zIndex: 1099, bgcolor: open ? 'rgba(0,0,0,0.18)' : 'transparent', transition: 'background-color 0.2s' }}
+          onClick={() => closeMenu()}
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1099,
+            bgcolor: open ? 'rgba(0,0,0,0.32)' : 'transparent',
+            transition: transition(['background-color'], DURATION.short4),
+          }}
         />
       )}
 
@@ -90,7 +126,16 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
         spacing={1.5}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        sx={{ position: 'fixed', right: 24, bottom: 24, zIndex: 1100 }}
+        sx={{
+          position: 'fixed',
+          right: { xs: 16, sm: 24 },
+          // Sit above the mobile navigation bar rather than behind it.
+          bottom: {
+            xs: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`,
+            sm: 24,
+          },
+          zIndex: 1100,
+        }}
       >
         {/* Action extended-FABs, stacked above the main FAB */}
         {mounted &&
@@ -116,10 +161,23 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
                   height: 72,
                   px: 3.25,
                   boxShadow: 3,
-                  border: '1px solid',
-                  borderColor: 'onPrimaryContainer',
-                  opacity: 0.95,
-                  '&:hover': { bgcolor: 'primaryContainer', opacity: 1, transform: 'scale(1.03)' },
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: transition(['box-shadow'], DURATION.short4),
+                  // M3 state layer rather than a scale transform: the button
+                  // shades, it does not grow. Growing a 72px control on hover
+                  // nudged the whole stack and made the labels jitter.
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    inset: 0,
+                    bgcolor: 'onPrimaryContainer',
+                    opacity: 0,
+                    transition: transition(['opacity'], DURATION.short4),
+                  },
+                  '&:hover': { bgcolor: 'primaryContainer', boxShadow: 4 },
+                  '@media (hover: hover)': { '&:hover::after': { opacity: 0.08 } },
+                  '&:focus-visible::after': { opacity: 0.1 },
                 }}
               >
                 <Box component="span" sx={{ display: 'inline-flex', lineHeight: 1, '& svg': { fontSize: '1.875rem' } }}>{action.icon}</Box>
@@ -130,23 +188,24 @@ export function AddFab({ onAddProject, onAddTask }: Props) {
 
         {/* Main FAB — icon rotates into × when open */}
         <Fab
+          ref={fabRef}
           color="primary"
-          aria-label="Add"
+          aria-label={open ? 'Close add menu' : 'Add'}
           aria-expanded={open}
+          aria-haspopup="menu"
           onClick={handleClick}
           sx={{
             width: 84,
             height: 84,
             borderRadius: '26px',
-            transition: 'box-shadow 0.2s, transform 0.2s',
-            '&:hover': { transform: 'scale(1.04)' },
+            transition: transition(['box-shadow'], DURATION.short4),
           }}
         >
           <Box
             component="span"
             sx={{
               display: 'inline-flex',
-              transition: 'transform 0.25s cubic-bezier(.2,.8,.4,1)',
+              transition: `transform ${DURATION.medium1}ms ${EASING.emphasized}`,
               transform: open ? 'rotate(135deg)' : 'rotate(0deg)',
               '& svg': { fontSize: '2.25rem' },
             }}

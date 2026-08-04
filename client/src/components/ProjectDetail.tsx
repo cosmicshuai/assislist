@@ -16,7 +16,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -29,7 +28,9 @@ import { api, type Project, type Task } from '../api/client';
 import { TaskCard } from './TaskCard';
 import { SourceTag } from './SourceTag';
 import { AddTaskForm } from './AddTaskForm';
-import { topoSortTasks } from '../lib/utils';
+import { DetailSkeleton, LoadingAnnouncer } from './Skeletons';
+import { useSnackbar } from '../context/SnackbarContext';
+import { collectDescendants, topoSortTasks } from '../lib/utils';
 
 interface Props {
   projectId: number;
@@ -46,20 +47,30 @@ export function ProjectDetail({ projectId, onBack }: Props) {
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { notify, notifyUndo, notifyError } = useSnackbar();
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  /**
+   * `background: true` refreshes without tearing the view down. Every mutation
+   * used to call the plain form, which set `loading` and replaced the whole
+   * task list with a spinner — ticking one checkbox unmounted and remounted
+   * the page. Only the initial load and a project switch should do that.
+   */
+  const load = useCallback(async ({ background = false } = {}) => {
+    if (!background) setLoading(true);
     setError(null);
     try {
       const [p, all] = await Promise.all([api.getProject(projectId), api.listTasks({ project_id: projectId })]);
       setProject(p);
       setTasks(all);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      // A failed background refresh must not blank out content that is still
+      // on screen and still correct.
+      if (background) notifyError(e, 'Could not refresh');
+      else setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, notifyError]);
 
   useEffect(() => {
     load();
@@ -84,26 +95,53 @@ export function ProjectDetail({ projectId, onBack }: Props) {
   const rootTasks = useMemo(() => topoSortTasks(tasks.filter((t) => !t.parentId)), [tasks]);
 
   async function handleToggle(task: Task) {
+    const reopening = task.status === 'completed';
+    const next: Task['status'] = reopening ? 'active' : 'completed';
+
+    // Paint the new state immediately — the checkbox is the most-used control
+    // in the app and should never wait on a round trip.
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
+
     try {
-      if (task.status === 'completed') {
-        await api.updateTask(task.id, { status: 'active' });
-      } else {
-        await api.completeTask(task.id);
-      }
-      await load();
+      if (reopening) await api.updateTask(task.id, { status: 'active' });
+      else await api.completeTask(task.id);
+      // Refresh in the background: completing a task can unblock others, and
+      // the server owns that decision.
+      await load({ background: true });
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to update task');
+      // Put the row back exactly as it was; the server rejected the change.
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+      notifyError(e, 'Could not update task');
     }
   }
 
-  async function handleDelete(task: Task) {
-    if (!confirm(`Delete "${task.title}"?`)) return;
-    try {
-      await api.deleteTask(task.id);
-      await load();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to delete task');
-    }
+  function handleDelete(task: Task) {
+    const descendants = collectDescendants(task.id, childrenOf);
+    const removed = new Set([task.id, ...descendants]);
+    const snapshot = tasks;
+
+    // Drop it from view now and hold the request for the length of the undo
+    // window. DELETE is not reversible server-side, so the only real undo is
+    // one that never sends it.
+    setTasks((prev) => prev.filter((t) => !removed.has(t.id)));
+
+    const label = descendants.length
+      ? `Deleted "${task.title}" and ${descendants.length} subtask${descendants.length === 1 ? '' : 's'}`
+      : `Deleted "${task.title}"`;
+
+    notifyUndo(
+      label,
+      async () => {
+        try {
+          await api.deleteTask(task.id);
+          await load({ background: true });
+        } catch (e) {
+          setTasks(snapshot);
+          notifyError(e, 'Could not delete task');
+        }
+      },
+      () => setTasks(snapshot),
+    );
   }
 
   function handleAddSubtask(parent: Task) {
@@ -112,28 +150,46 @@ export function ProjectDetail({ projectId, onBack }: Props) {
   }
 
   async function archive() {
-    try {
-      if (project?.status === 'archived') await api.restoreProject(project.id);
-      else await api.archiveProject(project!.id);
-      await load();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to archive/restore');
-    }
     setMenuAnchor(null);
+    if (!project) return;
+    const wasArchived = project.status === 'archived';
+    try {
+      if (wasArchived) await api.restoreProject(project.id);
+      else await api.archiveProject(project.id);
+      await load({ background: true });
+      // Archive has a true inverse on the server, so this undo re-issues the
+      // opposite call rather than deferring anything.
+      notifyUndo(
+        wasArchived ? 'Project restored' : 'Project archived',
+        () => {},
+        async () => {
+          try {
+            if (wasArchived) await api.archiveProject(project.id);
+            else await api.restoreProject(project.id);
+            await load({ background: true });
+          } catch (e) {
+            notifyError(e, 'Could not undo');
+          }
+        },
+      );
+    } catch (e) {
+      notifyError(e, wasArchived ? 'Could not restore project' : 'Could not archive project');
+    }
   }
 
   async function deleteProject() {
+    setConfirmDelete(false);
     try {
       await api.deleteProject(projectId);
+      notify('Project deleted');
       onBack();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to delete project');
+      notifyError(e, 'Could not delete project');
     }
-    setConfirmDelete(false);
   }
 
   if (error) return <Alert severity="error">{error}</Alert>;
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
+  if (loading) return <><LoadingAnnouncer label="Loading project" /><DetailSkeleton /></>;
   if (!project) return <Typography sx={{ py: 8, textAlign: 'center' }} color="text.secondary">Project not found.</Typography>;
 
   const openCount = tasks.filter((t) => t.status !== 'completed').length;
@@ -189,7 +245,7 @@ export function ProjectDetail({ projectId, onBack }: Props) {
 
       {showAdd && (
         <Box sx={{ mb: 2 }}>
-          <AddTaskForm onCreated={() => { setShowAdd(false); load(); }} projectId={projectId} parentId={addParentId} />
+          <AddTaskForm onCreated={() => { setShowAdd(false); load({ background: true }); }} projectId={projectId} parentId={addParentId} />
         </Box>
       )}
 

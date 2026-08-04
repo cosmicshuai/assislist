@@ -87,3 +87,27 @@ export function formatDue(iso: string | null): string {
   if (diffDays < 0) return `Overdue ${-diffDays}d`;
   return `Due ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
 }
+
+/**
+ * Every task beneath `rootId`, at any depth.
+ *
+ * Deleting a task cascades to its children on the server, so an optimistic
+ * removal has to take the same subtree out of the list — otherwise the
+ * children linger as orphans until the next refresh. Visited-set guarded so a
+ * malformed parent cycle cannot spin forever.
+ */
+export function collectDescendants(rootId: number, childrenOf: Map<number, Task[]>): number[] {
+  const out: number[] = [];
+  const seen = new Set<number>([rootId]);
+  const stack = [rootId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    for (const child of childrenOf.get(id) || []) {
+      if (seen.has(child.id)) continue;
+      seen.add(child.id);
+      out.push(child.id);
+      stack.push(child.id);
+    }
+  }
+  return out;
+}

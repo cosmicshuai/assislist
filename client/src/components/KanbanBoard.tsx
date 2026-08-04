@@ -1,5 +1,5 @@
 // components/KanbanBoard.tsx — Material 3 tile board: real projects grouped by urgency
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -7,11 +7,9 @@ import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Popper from '@mui/material/Popper';
-import Fade from '@mui/material/Fade';
 import Stack from '@mui/material/Stack';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -34,6 +32,7 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import type { Project } from '../api/client';
 import { api } from '../api/client';
 import { useProjects } from '../hooks/useProjects';
@@ -41,6 +40,10 @@ import { SourceTag } from './SourceTag';
 import { AddProjectForm } from './AddProjectForm';
 import { AddTaskForm } from './AddTaskForm';
 import { AddFab } from './AddFab';
+import { ProjectPreview } from './ProjectPreview';
+import { BoardSkeleton, LoadingAnnouncer } from './Skeletons';
+import { useSnackbar } from '../context/SnackbarContext';
+import { interactiveSurface } from '../theme/surfaces';
 import { formatDue } from '../lib/utils';
 
 interface Props {
@@ -63,8 +66,14 @@ export function KanbanBoard({ onOpenProject }: Props) {
   const [addMode, setAddMode] = useState<AddMode>(null);
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [hoverProject, setHoverProject] = useState<Project | null>(null);
+  const [previewProject, setPreviewProject] = useState<Project | null>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { notify, notifyUndo, notifyError } = useSnackbar();
+
+  // Hover previews are armed only where hovering is a real gesture. On touch,
+  // :hover latches after a tap and the popover would stick open with no way
+  // to dismiss it — there, an explicit info button opens a bottom sheet.
+  const canHover = useMediaQuery('(hover: hover) and (pointer: fine)', { noSsr: true });
 
   // Project action menu
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -81,50 +90,84 @@ export function KanbanBoard({ onOpenProject }: Props) {
   }, [projects]);
 
   function onEnter(e: React.MouseEvent<HTMLElement>, project: Project) {
+    if (!canHover) return;
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    const target = e.currentTarget;
     hoverTimeout.current = setTimeout(() => {
-      setAnchorEl(e.currentTarget);
-      setHoverProject(project);
+      setAnchorEl(target);
+      setPreviewProject(project);
     }, 150);
   }
   function onLeave() {
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
     setAnchorEl(null);
-    setHoverProject(null);
+    setPreviewProject(null);
+  }
+  function closePreview() {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    setAnchorEl(null);
+    setPreviewProject(null);
   }
 
+  // A popover anchored to a tile has to go away when the tile moves.
+  useEffect(() => {
+    if (!anchorEl) return;
+    window.addEventListener('scroll', closePreview, { passive: true, once: true });
+    return () => window.removeEventListener('scroll', closePreview);
+  }, [anchorEl]);
+
+  useEffect(() => () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); }, []);
+
   async function archive(project: Project) {
+    setMenuAnchor(null);
     try {
       await api.archiveProject(project.id);
+      reload();
+      notifyUndo('Project archived', () => {}, async () => {
+        try {
+          await api.restoreProject(project.id);
+          reload();
+        } catch (e) {
+          notifyError(e, 'Could not undo');
+        }
+      });
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to archive');
+      notifyError(e, 'Could not archive project');
     }
-    setMenuAnchor(null);
-    reload();
   }
   async function restore(project: Project) {
+    setMenuAnchor(null);
     try {
       await api.restoreProject(project.id);
+      reload();
+      notifyUndo('Project restored', () => {}, async () => {
+        try {
+          await api.archiveProject(project.id);
+          reload();
+        } catch (e) {
+          notifyError(e, 'Could not undo');
+        }
+      });
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to restore');
+      notifyError(e, 'Could not restore project');
     }
-    setMenuAnchor(null);
-    reload();
   }
   async function confirmDeleteNow() {
     if (!confirmDelete) return;
-    try {
-      await api.deleteProject(confirmDelete.id);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to delete');
-    }
+    const target = confirmDelete;
     setConfirmDelete(null);
     setMenuAnchor(null);
-    reload();
+    try {
+      await api.deleteProject(target.id);
+      notify(`Deleted "${target.title}"`);
+      reload();
+    } catch (e) {
+      notifyError(e, 'Could not delete project');
+    }
   }
 
   if (error) return <Alert severity="error">{error}</Alert>;
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
+  if (loading) return <><LoadingAnnouncer label="Loading projects" /><BoardSkeleton /></>;
 
   const totalOpen = projects.filter((p) => p.status !== 'completed' && p.status !== 'archived').length;
 
@@ -223,9 +266,7 @@ export function KanbanBoard({ onOpenProject }: Props) {
                         onMouseEnter={(e) => onEnter(e, p)}
                         onMouseLeave={onLeave}
                         sx={{
-                          bgcolor: 'surfaceContainer',
-                          transition: 'transform 0.18s cubic-bezier(.2,.8,.4,1), box-shadow 0.2s, background-color 0.2s',
-                          '&:hover': { transform: 'translateY(-3px)', boxShadow: 8, bgcolor: 'surfaceContainerHigh' },
+                          ...interactiveSurface(),
                           opacity: p.status === 'completed' ? 0.55 : 1,
                         }}
                       >
@@ -236,15 +277,27 @@ export function KanbanBoard({ onOpenProject }: Props) {
                                 {p.title.charAt(0).toUpperCase()}
                               </Avatar>
                               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: p.status === 'completed' ? 'line-through' : 'none' }}>
+                                <Typography variant="titleMedium" sx={{ fontWeight: 650, lineHeight: 1.3, textDecoration: p.status === 'completed' ? 'line-through' : 'none' }}>
                                   {p.title}
                                 </Typography>
                                 {p.context && (
-                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontSize: '0.8rem' }}>
+                                  <Typography variant="bodySmall" color="text.secondary" sx={{ mt: 0.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {p.context}
                                   </Typography>
                                 )}
                               </Box>
+                              {!canHover && (
+                                // Touch has no hover, so the context the
+                                // popover carries needs its own control.
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Details for ${p.title}`}
+                                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPreviewProject(p); setAnchorEl(null); }}
+                                  sx={{ mt: -0.5, mr: -0.5, color: 'onSurfaceVariant' }}
+                                >
+                                  <InfoOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              )}
                             </Stack>
                             <Stack direction="row" spacing={0.75} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 0.75 }}>
                               <SourceTag source={p.source} />
@@ -306,40 +359,13 @@ export function KanbanBoard({ onOpenProject }: Props) {
         </DialogActions>
       </Dialog>
 
-      {/* Hover preview popup */}
-      <Popper open={Boolean(anchorEl)} anchorEl={anchorEl} placement="right-start" transition>
-        {({ TransitionProps }) => (
-          <Fade {...TransitionProps} timeout={150}>
-            <Card elevation={8} sx={{ width: 300, p: 2, m: 1, bgcolor: 'surfaceContainerHigh' }}>
-              {hoverProject && (
-                <>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 650 }}>{hoverProject.title}</Typography>
-                    <SourceTag source={hoverProject.source} />
-                  </Stack>
-                  {hoverProject.context ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {hoverProject.context}
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" color="text.disabled" fontStyle="italic">No context</Typography>
-                  )}
-                  <Stack direction="row" spacing={0.75} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 0.75 }}>
-                    <Chip label={`${hoverProject.urgency} urgency`} size="small" color="primary" variant="outlined" sx={{ textTransform: 'capitalize' }} />
-                    {hoverProject.dueDate && (
-                      <Chip label={formatDue(hoverProject.dueDate)} size="small" color="warning" variant="outlined" />
-                    )}
-                    {hoverProject.totalTaskCount !== undefined && (
-                      <Chip label={`${hoverProject.totalTaskCount} tasks`} size="small" variant="outlined" />
-                    )}
-                    <Chip label={hoverProject.status} size="small" variant="outlined" />
-                  </Stack>
-                </>
-              )}
-            </Card>
-          </Fade>
-        )}
-      </Popper>
+      {/* Project preview — hover popover on pointer devices, sheet on touch */}
+      <ProjectPreview
+        project={previewProject}
+        anchorEl={anchorEl}
+        onClose={closePreview}
+        onOpenProject={onOpenProject}
+      />
     </Box>
   );
 }
