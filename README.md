@@ -48,28 +48,55 @@ healthy and errors on every request. Your data lives in the `pgdata` Docker
 volume — it survives `docker compose down` and is removed only with
 `docker compose down -v`.
 
-### Upgrading
+The first `up` builds the image from the source you just cloned, which takes a
+couple of minutes. To use the prebuilt image from GHCR instead, pull before
+bringing the stack up:
 
 ```bash
-docker compose pull      # fetch the newest image
-docker compose up -d
+docker compose pull && docker compose up -d
+```
+
+### Upgrading
+
+`ghcr.io/cosmicshuai/assislist:latest` tracks the most recent tagged release,
+so pulling gives you a published version rather than the tip of `main`.
+
+```bash
 # Back up your data first (see Backups).
+git pull                 # so compose, .env.example and the docs match the image
+docker compose pull      # fetch the newest published image
+docker compose up -d
+```
+
+To run the tip of `main` instead of the latest release, rebuild rather than
+pull — otherwise `docker compose up -d` keeps whatever image is already local:
+
+```bash
+git pull && docker compose up -d --build
 ```
 
 ## Manual install (advanced)
 
-Requires Node.js 22+ and PostgreSQL 16.
+Requires **Node.js 22.18+** and PostgreSQL 16. The 22.18 floor is not
+cosmetic: the server imports `db/schema.ts` directly, and Node only strips
+TypeScript types without a flag from 22.18 onward. On 22.0–22.17 `npm run
+migrate` fails with `Unknown file extension ".ts"`. Check with `node -v`.
+
+Run these from the repository root. Each block is a separate shell — `npm
+start` and `npm run dev` both stay in the foreground.
 
 ```bash
-# Server
+# 1. Server — first shell
 cd server
 cp .env.example .env     # set DATABASE_URL (or PGHOST/PGUSER/…) and
                          # TODO_API_TOKEN (openssl rand -hex 32)
 npm install
 npm run migrate
-npm start                # API on :3456
+npm start                # API on :3456 — keeps running
+```
 
-# Client (dev)
+```bash
+# 2. Client dev server — second shell, from the repository root
 cd client
 cp .env.example .env     # no secrets here — the client ships no credential
 npm install
@@ -77,11 +104,13 @@ npm run dev              # Vite dev server with /api proxy
 # Open the app and paste TODO_API_TOKEN once to unlock it.
 ```
 
-For production, build the client and let Express serve it on the same port:
+For production you do not need the Vite dev server. Build the client once and
+Express serves it on the same port as the API:
 
 ```bash
-cd client && npm run build
-# server serves client/dist on :3456 automatically
+# from the repository root
+cd client && npm install && npm run build
+cd ../server && npm start    # serves the API and client/dist on :3456
 ```
 
 ## Architecture
@@ -103,7 +132,7 @@ WhatsApp / AI agent ──▶ capture skill (transcribe + research + breakdown)
 
 ## Stack
 
-- **Server**: Node 22+, Express 5 (ESM), drizzle-orm + node-postgres
+- **Server**: Node 22.18+, Express 5 (ESM), drizzle-orm + node-postgres
 - **DB**: PostgreSQL 16
 - **Client**: React + Vite + MUI (Material 3) + PWA
 - **Development**: spec-driven development (see `specs/`)

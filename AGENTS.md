@@ -1,7 +1,8 @@
 # AGENTS.md — AssisList
 
 ## Stack
-- Node.js + Express, ESM (`"type": "module"`), Node 22+.
+- Node.js + Express, ESM (`"type": "module"`), Node 22.18+ (the server imports
+  `db/schema.ts` directly; unflagged type stripping landed in 22.18).
 - PostgreSQL 16 via node-postgres + drizzle-orm (repository pattern:
   TaskRepository, ProjectRepository).
 - Frontend: React + Vite + MUI in `client/` (built to `client/dist`, served
