@@ -59,6 +59,12 @@ export default function App() {
           color: 'text.primary',
           borderBottom: 1,
           borderColor: scrolled ? 'divider' : 'transparent',
+          // The page runs under the status bar and the notch now, so the bar
+          // pads itself out of their way. Padding rather than margin: the bar's
+          // own tone is what fills the status-bar strip.
+          pt: 'env(safe-area-inset-top, 0px)',
+          pl: 'env(safe-area-inset-left, 0px)',
+          pr: 'env(safe-area-inset-right, 0px)',
         }}
       >
         <Toolbar sx={{ gap: 1 }}>
@@ -104,6 +110,10 @@ export default function App() {
           maxWidth: 1000,
           width: '100%',
           mx: 'auto',
+          // Landscape on a notched phone puts the notch beside the content.
+          // max() keeps the usual gutter everywhere it is the larger of the two.
+          pl: { xs: 'max(16px, env(safe-area-inset-left, 0px))', md: 'max(24px, env(safe-area-inset-left, 0px))' },
+          pr: { xs: 'max(16px, env(safe-area-inset-right, 0px))', md: 'max(24px, env(safe-area-inset-right, 0px))' },
           // Clear the fixed navigation bar on mobile so the last card is not
           // trapped underneath it.
           pb: { xs: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`, sm: 3 },
