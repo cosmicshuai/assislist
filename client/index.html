@@ -11,6 +11,14 @@
     <meta name="theme-color" content="#131318" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- Edge-to-edge on iOS. Without black-translucent, an installed web app
+         is laid out *between* the status bar and the home indicator: the
+         viewport-fit=cover above is ignored, every env(safe-area-inset-*)
+         resolves to 0px, and iOS fills the home-indicator strip with the body
+         background — a 34pt gap under the navigation bar. Translucent hands
+         the whole screen to the page, so the insets become real and the
+         bar's own padding covers that strip. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="AssisList" />
     <meta name="description" content="Self-hosted productivity: capture tasks from WhatsApp or your AI agent, manage them in a mobile-first web app." />
     <title>AssisList</title>

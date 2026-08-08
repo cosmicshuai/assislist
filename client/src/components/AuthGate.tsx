@@ -32,6 +32,15 @@ export const useAuth = () => useContext(AuthContext);
 
 type Status = 'checking' | 'locked' | 'unlocked';
 
+// This screen owns the whole viewport, which on iOS now includes the status
+// bar and the home indicator. Keep the card out from under both.
+const safeArea = {
+  pt: 'calc(24px + env(safe-area-inset-top, 0px))',
+  pb: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+  pl: 'max(24px, env(safe-area-inset-left, 0px))',
+  pr: 'max(24px, env(safe-area-inset-right, 0px))',
+};
+
 export function AuthGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('checking');
   const [token, setToken] = useState('');
@@ -82,7 +91,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     // different size. A card-shaped placeholder in the same position means the
     // unlock form fades in rather than jumping into place.
     return (
-      <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3 }}>
+      <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3, ...safeArea }}>
         <Box role="status" aria-label="Checking session" sx={{ width: '100%', maxWidth: 420 }}>
           <Skeleton variant="rounded" height={332} sx={{ borderRadius: 7 }} />
         </Box>
@@ -92,7 +101,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (status === 'locked') {
     return (
-      <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3 }}>
+      <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3, ...safeArea }}>
         <Card
           sx={{
             p: 4,
